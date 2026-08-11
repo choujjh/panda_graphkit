@@ -1,28 +1,67 @@
 from dataclasses import dataclass
 
+"""Abstract syntax tree (AST) node definitions for the expression language.
+
+This module defines simple dataclass-based node types used by the
+parser to represent expressions and statements. It also provides a
+`print_ast` utility for a human-readable tree dump useful during
+development and debugging.
+"""
+
+
 @dataclass
 class ASTNode:
-    pass
+    """Base class for all AST node types.
+
+    Subclass this to represent specific AST constructs. Instances are
+    plain dataclasses and carry no behaviour beyond their fields.
+    """
 
 
 @dataclass
 class Identifier(ASTNode):
+    """An identifier, e.g. variable or function name.
+
+    Attributes:
+        name: The identifier name as a string.
+    """
+
     name: str
 
 
 @dataclass
 class AttributeAccess(ASTNode):
+    """Accessing attributes or indexing on a base node.
+
+    Examples include `obj.attr` and `arr[0]` (indexing is represented
+    by nested AST nodes in `attributes`).
+    """
+
     node: ASTNode
     attributes: list[ASTNode]
 
 
 @dataclass
 class NumberLiteral(ASTNode):
+    """A numeric literal.
+
+    Attributes:
+        value: Numeric value (float) parsed from source.
+    """
+
     value: float
 
 
 @dataclass
 class BinaryOperation(ASTNode):
+    """A binary operation node, such as addition or multiplication.
+
+    Attributes:
+        operation: The operator symbol as a string (e.g. '+').
+        left: Left operand node.
+        right: Right operand node.
+    """
+
     operation: str
     left: ASTNode
     right: ASTNode
@@ -30,29 +69,65 @@ class BinaryOperation(ASTNode):
 
 @dataclass
 class UnaryOperation(ASTNode):
+    """A unary operation node, such as negation.
+
+    Attributes:
+        operator: Operator symbol (e.g. '-').
+        operand: Operand node.
+    """
+
     operator: str
     operand: ASTNode
 
 
 @dataclass
 class FunctionCall(ASTNode):
+    """A function call expression.
+
+    Attributes:
+        function: Expression evaluating to the callable being invoked.
+        arguments: List of argument AST nodes.
+    """
+
     function: ASTNode
     arguments: list[ASTNode]
 
 
 @dataclass
 class Assignment(ASTNode):
+    """An assignment statement node.
+
+    Attributes:
+        target: LHS of the assignment (identifier or attribute access).
+        value: RHS expression to assign.
+    """
+
     target: ASTNode
     value: ASTNode
 
 
 @dataclass
 class Program(ASTNode):
+    """A container node representing a sequence of statements.
+
+    Attributes:
+        statments: List of top-level AST nodes (statements).
+    """
+
     statments: list[ASTNode]
 
 
 def print_ast(node: ASTNode, indent="", is_last=True):
-    """"""
+    """Print a visual tree representation of an AST node.
+
+    This helper is useful for debugging. It prints the node and its
+    children using a simple ASCII tree format.
+
+    Args:
+        node: The root AST node to print.
+        indent: Internal use only; prefix string for the current level.
+        is_last: Internal use only; whether this node is the last child.
+    """
     connector = "└── " if is_last else "├── "
     print_prefix = f"{indent}{connector}"
     next_indent = f"{indent}{'    ' if is_last else '│   '}"

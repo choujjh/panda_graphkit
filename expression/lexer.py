@@ -1,17 +1,27 @@
+"""Lexer for the expression language used by panda_graphkit.
+
+This module provides a simple tokenizer that converts a source
+string into a stream of `Token` instances. It recognizes identifiers,
+numbers, strings, operators, punctuation, and newlines.
+
+The primary entrypoint is `Tokenizer.tokenize()` which returns a list
+of `Token` objects ending with an `EOF` token.
+"""
+
 from enum import Enum, auto
 from dataclasses import dataclass
 
 class TokenType(Enum):
+    """Enumeration of all token types produced by the tokenizer.
+
+    Token types include literals, operators, punctuation, and special
+    markers like `NEWLINE` and `EOF`.
+    """
     
     # literals
     IDENTIFIER = auto()
     NUMBER = auto()
     STRING = auto()
-
-    # keywords
-    CLAMP = auto()
-    SIN = auto()
-    COS = auto()
 
     # Operators
     PLUS = auto()
@@ -54,11 +64,6 @@ _PUNCTUATION = {
     ".": TokenType.PERIOD,
     "=": TokenType.EQUAL,
 }
-FUNCTIONS = {
-    "clamp": TokenType.CLAMP,
-    "sin": TokenType.SIN,
-    "cos": TokenType.COS,
-}
 
 
 @dataclass(frozen=True)
@@ -77,7 +82,16 @@ class Token:
 
 
 class Tokenizer:
-    """ Takes a string and tokenizes it
+    """Convert a source string into a sequence of `Token` objects.
+
+    The tokenizer scans the input character-by-character and groups
+    characters into tokens recognized by the grammar. It does not
+    perform parsing or semantic analysis; it only produces token
+    objects describing the lexical elements.
+
+    Args:
+        source: The input string to tokenize. If `None`, an empty
+            sequence is produced.
     """
     def __init__(self, source):
         self.source = source
@@ -87,6 +101,10 @@ class Tokenizer:
         self.column = 0
 
     def tokenize(self) -> list[TokenType]:
+        """Tokenize the entire source and return a list of `Token`.
+
+        The returned list always ends with an `EOF` token.
+        """
         tokens = []
         while not self._at_end():
             self._skip_whitespace()
@@ -101,6 +119,12 @@ class Tokenizer:
         return tokens
 
     def _next_token(self):
+        """Read and return the next token from the input stream.
+
+        This is the core dispatch that examines the next character and
+        delegates to specialized routines for identifiers, numbers,
+        operators, and punctuation.
+        """
         char = self._advance()
         if char == ":" or char == "|" or char.isalpha():
             return self._identifier()
@@ -122,6 +146,12 @@ class Tokenizer:
         self._raise_value_error(char)
 
     def _match(self, expected_char: str):
+        """Conditionally consume `expected_char` from the input.
+
+        Returns `True` and advances the cursor if the next character
+        matches `expected_char`. Otherwise returns `False` and leaves
+        the cursor unchanged.
+        """
         if self._at_end():
             return False
         if self._peek() != expected_char:
@@ -131,7 +161,11 @@ class Tokenizer:
         return True
 
     def _identifier(self):
-        """Creates and returns Identifier Token"""
+        """Consume characters for an identifier and return an IDENTIFIER token.
+
+        Identifiers may contain letters, digits, and the characters
+        `|`, `:`, and `_`.
+        """
 
         start = self.current - 1
         while not self._at_end():
@@ -141,12 +175,15 @@ class Tokenizer:
             self._advance()
 
         value = self.source[start : self.current]
-        if value in FUNCTIONS.keys():
-            return Token(type_=FUNCTIONS[value], value=value)
+        
         return Token(type_=TokenType.IDENTIFIER, value=value)
 
     def _number(self):
-        """Creates and returns number Token"""
+        """Consume characters for a number literal and return a NUMBER token.
+
+        Supports integer and floating-point formats using `.` as the
+        decimal separator. This routine does not validate numeric ranges.
+        """
 
         start = self.current - 1
         while not self._at_end():
@@ -159,6 +196,11 @@ class Tokenizer:
         return Token(type_=TokenType.NUMBER, value=value)
 
     def _operator(self, char):
+        """Return an operator token starting with `char`.
+
+        Handles multi-character operators such as `**` for power.
+        Raises `ValueError` for unknown operator starts.
+        """
         if char == "*":
             if self._match("*"):
                 return Token(TokenType.POWER, "**")
@@ -170,8 +212,11 @@ class Tokenizer:
         self._raise_value_error(char)
 
     def _skip_whitespace(self):
-        """Places pointer at next character thats not a whitespace. 
-        doesn't skip whitelines"""
+        """Advance the cursor past horizontal whitespace (not newlines).
+
+        This stops at `\r`/`\n` so that blank lines are preserved as
+        `NEWLINE` tokens by other logic.
+        """
         while not self._at_end():
             char = self._peek()
             if char in "\r\n":
@@ -181,7 +226,7 @@ class Tokenizer:
             self._advance()
 
     def _skip_new_lines(self):
-        """Places pointer at next character thats not a new line"""
+        """Advance the cursor past any consecutive newline characters."""
         while not self._at_end():
             char = self._peek()
             if char in "\r\n":
@@ -190,7 +235,11 @@ class Tokenizer:
                 break
 
     def _advance(self):
-        """Returns character at current pointer and advances pointer"""
+        """Return the current character and advance the input cursor by one.
+
+        Updates internal `column` tracking and returns the consumed
+        character. Caller must ensure not at end before invoking.
+        """
 
         char = self.source[self.current]
         self.current += 1
@@ -198,18 +247,22 @@ class Tokenizer:
         return char
 
     def _peek(self):
-        """Returns character at current pointer"""
+        """Return the character at the current cursor without consuming it."""
 
         char = self.source[self.current]
         return char
 
     def _at_end(self):
-        """At end of source"""
+        """Return True when the input cursor has reached the end."""
 
         return self.current >= self.source_len
 
     def _raise_value_error(self, char: str):
-        """Raises Value Error"""
+        """Raise a `ValueError` describing an unexpected character.
+
+        The message includes the current row and column for easier
+        debugging of lexical errors.
+        """
         column = self.column
         if self.current != 0 and char == self.source[self.current - 1]:
             column -= 1

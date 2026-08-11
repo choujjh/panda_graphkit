@@ -1,8 +1,24 @@
-from .lexer import TokenType, Token, FUNCTIONS
+"""Recursive descent parser for the expression language.
+
+This module exposes `Parser`, which transforms a list of lexical
+`Token` objects (from `expression.lexer`) into an AST composed of the
+node classes defined in `expression.ast`.
+
+The parser implements operator precedence and supports function
+calls, attribute access, indexing, unary and binary operators, and
+assignment statements.
+"""
+
+from .lexer import TokenType, Token
 from . import ast
 
 class Parser:
-    function_calls = [TokenType.CLAMP, TokenType.SIN, TokenType.COS]
+    """Parse a token stream into an `ast.Program`.
+
+    Usage: construct with a token list and call `parse()` to return an
+    `ast.Program` representing the top-level statements.
+    """
+
     PRECEDENCE = {
         TokenType.PLUS: 10,
         TokenType.MINUS: 10,
@@ -18,12 +34,16 @@ class Parser:
         self.current = 0
 
     def parse(self) -> ast.Program:
+        """Parse the token list and return an `ast.Program`.
+
+        This consumes tokens until EOF, collecting top-level statements.
+        Newlines and semicolons are treated as statement separators.
+        """
         statements = []
         while not self._at_end():
             while self._match(TokenType.NEWLINE, TokenType.SEMICOLON):
                 pass
 
-            print(self._peek())
             statement = self._assignment()
             if statement is not None:
                 statements.append(statement)
@@ -41,6 +61,11 @@ class Parser:
         return ast.Program(statements)
 
     def _assignment(self) -> ast.ASTNode:
+        """Parse an assignment or an expression.
+
+        If an `=` follows the initial expression, this produces an
+        `ast.Assignment` node. Otherwise returns the parsed expression.
+        """
         target = self._expression()
         if self._match(TokenType.EQUAL, "="):
             value = self._expression()
@@ -52,6 +77,12 @@ class Parser:
         return target
 
     def _expression(self, min_precedence=0) -> ast.ASTNode:
+        """Parse an expression using precedence climbing.
+
+        `min_precedence` is used to implement operator precedence and
+        left/right associativity. Returns an AST node for the
+        expression.
+        """
         left = self._unary()
 
         while True:
@@ -75,6 +106,11 @@ class Parser:
         return left
 
     def _unary(self) -> ast.ASTNode:
+        """Handle unary `+` and `-` operators, falling back to postfix.
+
+        Returns an `ast.UnaryOperation` if a leading plus/minus is
+        present; otherwise returns the result of `_post_fix()`.
+        """
         if self._match(TokenType.PLUS) or self._match(TokenType.MINUS):
             operator = self._previous()
             operand = self._post_fix()
@@ -84,8 +120,29 @@ class Parser:
         return self._post_fix()
 
     def _post_fix(self) -> ast.ASTNode:
+        """Handle postfix constructs: function calls and attribute/index access.
+
+        This first parses a primary expression and then consumes any
+        sequence of calls (`(...)`) or attribute/index accesses
+        (`.name` / `[expr]`). Returns an appropriate AST node.
+        """
         token = self._primary()
         attributes = []
+
+        if isinstance(token, ast.Identifier) and self._match(TokenType.LEFT_PAREN):
+            while True:
+                value = self._expression()
+                attributes.append(value)
+                if not self._match(TokenType.COMMA):
+                    break
+                if self._peek().type_ is TokenType.RIGHT_PAREN:
+                    break
+            self._expect(TokenType.RIGHT_PAREN)
+
+            return ast.FunctionCall(
+                function=token,
+                arguments=attributes
+            )
 
         while isinstance(token, ast.Identifier):
             if self._match(TokenType.PERIOD):
@@ -101,24 +158,14 @@ class Parser:
         if attributes:
             return ast.AttributeAccess(token, attributes)
 
-        if isinstance(token, ast.FunctionCall):
-            self._expect(TokenType.LEFT_PAREN)
-
-            while True:
-                value = self._expression()
-                attributes.append(value)
-                if not self._match(TokenType.COMMA):
-                    break
-                if self._peek().type_ is TokenType.RIGHT_PAREN:
-                    break
-            self._expect(TokenType.RIGHT_PAREN)
-
-            token.arguments = attributes
-            return token
-
         return token
 
     def _primary(self) -> ast.ASTNode:
+        """Parse a primary expression: identifier, number, or parenthesized.
+
+        Returns an AST node corresponding to the primary. Raises
+        `SyntaxError` on unexpected tokens.
+        """
         token = self._advance()
 
         if token.type_ is TokenType.IDENTIFIER:
@@ -133,12 +180,14 @@ class Parser:
 
             return node
 
-        if token.type_ in FUNCTIONS.values():
-            return ast.FunctionCall(function=ast.Identifier(token.value), arguments=[])
-
         raise SyntaxError(f"Unexpected token: {token.type_}")
 
     def _flatten_attribute_access(self, node: ast.ASTNode, attributes):
+        """Flatten a nested `AttributeAccess` into the attribute list.
+
+        This helper converts nested attribute/index expressions into a
+        flat list used by `AttributeAccess` nodes.
+        """
         if isinstance(node, ast.AttributeAccess):
             attributes.append(node.node)
             attributes.extend(node.attributes)
@@ -146,39 +195,24 @@ class Parser:
             attributes.append(node)
 
     def _peek(self) -> Token:
-        """looks at next token
-
-        Returns:
-            Token:
-        """
+        """Return the next token without consuming it."""
         return self.tokens[self.current]
 
     def _previous(self) -> Token:
-        """gets previous token
-
-        Returns:
-            Token:
-        """
+        """Return the most recently consumed token."""
         return self.tokens[self.current - 1]
 
     def _advance(self) -> Token:
-        """gets next token while consuming it
-
-        Returns:
-            Token:
-        """
+        """Consume and return the next token from the token stream."""
         token = self.tokens[self.current]
         self.current += 1
         return token
 
     def _match(self, *expected_token):
-        """if next token matches token then consumes it
+        """If the next token matches any `expected_token`, consume it.
 
-        Args:
-            expected_token (TokenType):
-
-        Returns:
-            bool:
+        Accepts one or more `TokenType` values. Returns `True` when a
+        match occurred and the token was consumed.
         """
         if self._at_end():
             return False
@@ -189,14 +223,10 @@ class Parser:
         return False
 
     def _expect(self, expected_token: TokenType):
-        """_expect _summary_
+        """Assert the next token is `expected_token` and consume it.
 
-        Args:
-            expected_token (TokenType): _description_
-
-        Raises:
-            ValueError: _description_
-            ValueError: _description_
+        Raises `ValueError` with a helpful message if the expectation
+        is not met or if the stream ends unexpectedly.
         """
         if self._at_end():
             self.raise_value_error()
@@ -205,17 +235,9 @@ class Parser:
         self._advance()
 
     def _at_end(self):
-        """returns if at end
-
-        Returns:
-            bool:
-        """
+        """Return True if there are no more non-EOF tokens to consume."""
         return self.current >= self.token_len or self._peek().type_ is TokenType.EOF
 
     def raise_value_error(self):
-        """raises ValueError
-
-        Raises:
-            ValueError:
-        """
+        """Raise a `ValueError` describing the unexpected token at cursor."""
         raise ValueError(f"Unexpected Token: {self.tokens[self.current]}")
