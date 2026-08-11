@@ -56,7 +56,7 @@ Expression Language
    ▼    ▼    ▼      ▼
  Maya Blender Houdini Unreal
 ```
-## Instalation
+## Installation
 Panda GraphKit is currently under development and is intended to be installed 
 directly from the source repository.
 
@@ -92,9 +92,9 @@ After installation, GraphKit can be imported from Maya:
 
 ```python
 import panda_graphkit
-
+```
 For example:
-
+```python
 from panda_graphkit import Graph
 
 graph = Graph()
