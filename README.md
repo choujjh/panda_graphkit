@@ -72,7 +72,7 @@ cd panda-graphkit
 Then open Maya and use Maya's Python interpreter to install the package.
 
 From Maya's Python console:
-```text
+```python
 import subprocess
 import sys
 
@@ -83,17 +83,19 @@ subprocess.check_call([
     "install",
     "-e",
     "/path/to/panda-graphkit",
-])```
+])
+```
 
 Replace /path/to/panda-graphkit with the location where you cloned the repository.
 
 After installation, GraphKit can be imported from Maya:
 
-```text
+```python
 import panda_graphkit
 
 For example:
 
 from panda_graphkit import Graph
 
-graph = Graph()```
+graph = Graph()
+```
