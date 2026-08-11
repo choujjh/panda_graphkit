@@ -5,7 +5,7 @@ and outputs for validation and dispatch.
 """
 
 from dataclasses import dataclass
-from .graph_types import GraphType
+from .attribute_types import AttributeType
 
 
 @dataclass(frozen=True)
@@ -19,7 +19,7 @@ class Parameter:
         min_count: Minimum number of values when `variadict` is True.
     """
     name:str
-    type: GraphType
+    type: AttributeType
     variadict: bool = False
     min_count: int = 1
 
@@ -32,5 +32,5 @@ class Signature:
         inputs: Sequence of `Parameter` objects describing expected inputs.
         output: Expected `GraphType` of the result.
     """
-    inputs=list[Parameter]
-    output=GraphType
+    inputs: list[Parameter]
+    output: AttributeType

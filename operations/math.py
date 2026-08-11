@@ -6,7 +6,7 @@ common math functions such as `sin`, `cos`, `add`, `multiply`, and
 by downstream validation and dispatch.
 """
 
-import core.graph_types as graph_types
+import core.attribute_types as attribute_types
 from core.signature import Parameter, Signature
 from core.operation import Operation
 
@@ -14,8 +14,11 @@ SIN = Operation(
     name="sin",
     signatures=(
         Signature(
-            Parameter("value", graph_types.NUMBER),
-            )
+            inputs=[
+                Parameter("value", attribute_types.NUMBER)
+                ],
+            output=attribute_types.NUMBER
+        )
     )
 )
 
@@ -23,7 +26,10 @@ COS = Operation(
     name="cos",
     signatures=(
         Signature(
-            Parameter("value", graph_types.NUMBER),
+            inputs=[
+                Parameter("value", attribute_types.NUMBER)
+            ],
+            output=attribute_types.NUMBER
         )
     )
 )
@@ -32,11 +38,13 @@ REMAP = Operation(
     name="remap",
     signatures=(
         Signature(
-            Parameter("input_min", graph_types.NUMBER),
-            Parameter("input_max", graph_types.NUMBER),
-            Parameter("output_min", graph_types.NUMBER),
-            Parameter("output_max", graph_types.NUMBER),
-            Parameter("value", graph_types.NUMBER),
+            inputs = [
+                Parameter("input_min", attribute_types.NUMBER),
+                Parameter("input_max", attribute_types.NUMBER),
+                Parameter("output_min", attribute_types.NUMBER),
+                Parameter("output_max", attribute_types.NUMBER),
+                Parameter("value", attribute_types.NUMBER)],
+            output=attribute_types.NUMBER
         )
     )
 )
@@ -45,18 +53,26 @@ ADD = Operation(
     name="add",
     signatures=(
         Signature(
-            Parameter("value", graph_types.NUMBER, variadict=True, min_count=2)
+            inputs=[Parameter("value", attribute_types.NUMBER, variadict=True, min_count=2)],
+            output=attribute_types.NUMBER
         ),
         Signature(
-            Parameter("value", graph_types.VECTOR, variadict=True, min_count=2)
+            inputs=[Parameter("value", attribute_types.VECTOR, variadict=True, min_count=2)],
+            output=attribute_types.VECTOR
         ),
         Signature(
-            Parameter("value1", graph_types.NUMBER),
-            Parameter("value2", graph_types.VECTOR)
+            inputs=[
+                Parameter("value1", attribute_types.NUMBER),
+                Parameter("value2", attribute_types.VECTOR)
+            ],
+            output=attribute_types.VECTOR
         ),
         Signature(
-            Parameter("value1", graph_types.VECTOR),
-            Parameter("value2", graph_types.NUMBER)
+            inputs=[
+                Parameter("value1", attribute_types.VECTOR),
+                Parameter("value2", attribute_types.NUMBER)
+            ],
+            output=attribute_types.VECTOR
         )
     )
 )
@@ -65,20 +81,32 @@ SUBTRACT = Operation(
     name="subtract",
     signatures=(
         Signature(
-            Parameter("value1", graph_types.NUMBER),
-            Parameter("value2", graph_types.NUMBER)
+            inputs=[
+                Parameter("value1", attribute_types.NUMBER),
+                Parameter("value2", attribute_types.NUMBER)
+            ],
+            output=attribute_types.NUMBER
         ),
         Signature(
-            Parameter("value1", graph_types.VECTOR),
-            Parameter("value2", graph_types.VECTOR)
+            inputs=[
+                Parameter("value1", attribute_types.VECTOR),
+                Parameter("value2", attribute_types.VECTOR)
+            ],
+            output=attribute_types.VECTOR
         ),
         Signature(
-            Parameter("value1", graph_types.NUMBER),
-            Parameter("value2", graph_types.VECTOR)
+            inputs=[
+                Parameter("value1", attribute_types.NUMBER),
+                Parameter("value2", attribute_types.VECTOR)
+            ],
+            output=attribute_types.VECTOR
         ),
         Signature(
-            Parameter("value1", graph_types.VECTOR),
-            Parameter("value2", graph_types.NUMBER)
+            inputs=[
+                Parameter("value1", attribute_types.VECTOR),
+                Parameter("value2", attribute_types.NUMBER)
+            ],
+            output=attribute_types.VECTOR
         )
     )
 )
@@ -87,19 +115,29 @@ MULTIPLY = Operation(
     name="multiply",
     signatures=(
         Signature(
-            Parameter("value", graph_types.NUMBER, variadict=True, min_count=2)
+            inputs=[Parameter("value", attribute_types.NUMBER, variadict=True, min_count=2)],
+            output=attribute_types.NUMBER
         ),
         Signature(
-            Parameter("value1", graph_types.NUMBER),
-            Parameter("value2", graph_types.VECTOR)
+            inputs=[
+                Parameter("value1", attribute_types.NUMBER),
+                Parameter("value2", attribute_types.VECTOR)
+            ],
+            output=attribute_types.VECTOR
         ),
         Signature(
-            Parameter("value1", graph_types.VECTOR),
-            Parameter("value2", graph_types.NUMBER)
+            inputs=[
+                Parameter("value1", attribute_types.VECTOR),
+                Parameter("value2", attribute_types.NUMBER)
+            ],
+            output=attribute_types.VECTOR   
         ),
         Signature(
-            Parameter("value1", graph_types.VECTOR),
-            Parameter("value2", graph_types.VECTOR)
+            inputs=[
+                Parameter("value1", attribute_types.VECTOR),
+                Parameter("value2", attribute_types.VECTOR)
+            ],
+            output=attribute_types.VECTOR
         )
     )
 )
@@ -108,20 +146,32 @@ DIVIDE = Operation(
     name="divide",
     signatures=(
         Signature(
-            Parameter("value1", graph_types.NUMBER),
-            Parameter("value2", graph_types.NUMBER)
+            inputs=[
+                Parameter("value1", attribute_types.NUMBER),
+                Parameter("value2", attribute_types.NUMBER)
+            ],
+            output=attribute_types.NUMBER
         ),
         Signature(
-            Parameter("value1", graph_types.NUMBER),
-            Parameter("value2", graph_types.VECTOR)
+            inputs=[
+                Parameter("value1", attribute_types.NUMBER),
+                Parameter("value2", attribute_types.VECTOR)
+            ],
+            output=attribute_types.VECTOR
         ),
         Signature(
-            Parameter("value1", graph_types.VECTOR),
-            Parameter("value2", graph_types.NUMBER)
+            inputs=[
+                Parameter("value1", attribute_types.VECTOR),
+                Parameter("value2", attribute_types.NUMBER)
+            ],
+            output=attribute_types.VECTOR
         ),
         Signature(
-            Parameter("value1", graph_types.VECTOR),
-            Parameter("value2", graph_types.VECTOR)
+            inputs=[
+                Parameter("value1", attribute_types.VECTOR),
+                Parameter("value2", attribute_types.VECTOR)
+            ],
+            output=attribute_types.VECTOR
         )
     )
 )
@@ -130,12 +180,30 @@ POWER = Operation(
     name="power",
     signatures=(
         Signature(
-            Parameter("value1", graph_types.NUMBER),
-            Parameter("value2", graph_types.NUMBER)
+            inputs=[
+                Parameter("value1", attribute_types.NUMBER),
+                Parameter("value2", attribute_types.NUMBER)
+            ],
+            output=attribute_types.NUMBER
         ),
         Signature(
-            Parameter("value1", graph_types.VECTOR),
-            Parameter("value2", graph_types.NUMBER)
+            inputs=[
+                Parameter("value1", attribute_types.VECTOR),
+                Parameter("value2", attribute_types.NUMBER)
+            ],
+            output=attribute_types.VECTOR
         )
     )
 )
+
+
+__all__ = [
+    "SIN",
+    "COS",
+    "REMAP",
+    "ADD",
+    "SUBTRACT",
+    "MULTIPLY",
+    "DIVIDE",
+    "POWER",
+]
