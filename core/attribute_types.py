@@ -1,7 +1,7 @@
 """Attribute and node type definitions used by operations and signatures.
 
-This module provides a small nominal type system used to describe 
-input/output kinds foroperations (Number, Vector, Bool, etc.). Use these 
+This module provides a small nominal type system used to describe
+input/output kinds foroperations (Number, Vector, Bool, etc.). Use these
 types in `Signature` and validation logic.
 """
 
@@ -12,6 +12,7 @@ class AttributeType:
     `is_a` can be used to test whether a type is equal to or a
     subtype of another by following the `parent` chain.
     """
+
     def __init__(self, name: str, parent=None):
         self.name = name
         self.parent = parent
@@ -19,16 +20,23 @@ class AttributeType:
     def is_a(self, other):
         current = self
 
+        if not isinstance(other, AttributeType):
+            return False
+
         while current is not None:
             if current == other:
                 return True
-
             current = current.parent
 
         return False
 
     def __repr__(self):
         return self.name
+
+    def __eq__(self, other):
+        if not isinstance(other, AttributeType):
+            return False
+        return self.name == other.name and self.parent == other.parent
 
 
 # Common built-in types
@@ -40,6 +48,7 @@ VECTOR2 = AttributeType("Vector2", parent=VECTOR)
 VECTOR3 = AttributeType("Vector3", parent=VECTOR)
 BOOL = AttributeType("Bool")
 MATRIX4 = AttributeType("Matrix4")
+STRING = AttributeType("String")
 
 __all__ = [
     "AttributeType",
@@ -51,4 +60,5 @@ __all__ = [
     "VECTOR3",
     "BOOL",
     "MATRIX4",
+    "STRING",
 ]

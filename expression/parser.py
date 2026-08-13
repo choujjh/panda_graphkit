@@ -12,6 +12,7 @@ assignment statements.
 from .lexer import TokenType, Token
 from . import ast
 
+
 class Parser:
     """Parse a token stream into an `ast.Program`.
 
@@ -43,20 +44,15 @@ class Parser:
         while not self._at_end():
             while self._match(TokenType.NEWLINE, TokenType.SEMICOLON):
                 pass
-
+            if self._at_end():
+                break
             statement = self._assignment()
             if statement is not None:
                 statements.append(statement)
 
             if not self._at_end():
-
-                if not self._match(
-                    TokenType.NEWLINE,
-                    TokenType.SEMICOLON
-                ):
-                    raise SyntaxError(
-                        "Expected newline or ';' after statement"
-                    )
+                if not self._match(TokenType.NEWLINE, TokenType.SEMICOLON):
+                    raise SyntaxError("Expected newline or ';' after statement")
 
         return ast.Program(statements)
 
@@ -70,10 +66,7 @@ class Parser:
         if self._match(TokenType.EQUAL, "="):
             value = self._expression()
 
-            return ast.Assignment(
-                target=target,
-                value=value
-            )
+            return ast.Assignment(target=target, value=value)
         return target
 
     def _expression(self, min_precedence=0) -> ast.ASTNode:
@@ -97,11 +90,7 @@ class Parser:
             if operator.type_ in [TokenType.CARET, TokenType.POWER]:
                 next_precedence = precedence
             right = self._expression(next_precedence)
-            left = ast.BinaryOperation(
-                operation=operator.value,
-                left=left,
-                right=right
-            )
+            left = ast.BinaryOperation(operation=operator.value, left=left, right=right)
 
         return left
 
@@ -139,10 +128,7 @@ class Parser:
                     break
             self._expect(TokenType.RIGHT_PAREN)
 
-            return ast.FunctionCall(
-                function=token,
-                arguments=attributes
-            )
+            return ast.FunctionCall(function=token, arguments=attributes)
 
         while isinstance(token, ast.Identifier):
             if self._match(TokenType.PERIOD):
@@ -172,7 +158,7 @@ class Parser:
             return ast.Identifier(token.value)
 
         if token.type_ is TokenType.NUMBER:
-            return ast.NumberLiteral(float(token.value))
+            return ast.Literal(token.value)
 
         if token.type_ is TokenType.LEFT_PAREN:
             node = self._expression()

@@ -17,5 +17,6 @@ class Operation:
         name: Public name of the operation (e.g. 'sin').
         signatures: Tuple of `Signature` objects describing allowed inputs.
     """
-    name:str
+
+    name: str
     signatures: tuple[Signature, ...]

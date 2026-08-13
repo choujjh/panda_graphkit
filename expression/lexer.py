@@ -11,13 +11,14 @@ of `Token` objects ending with an `EOF` token.
 from enum import Enum, auto
 from dataclasses import dataclass
 
+
 class TokenType(Enum):
     """Enumeration of all token types produced by the tokenizer.
 
     Token types include literals, operators, punctuation, and special
     markers like `NEWLINE` and `EOF`.
     """
-    
+
     # literals
     IDENTIFIER = auto()
     NUMBER = auto()
@@ -68,12 +69,13 @@ _PUNCTUATION = {
 
 @dataclass(frozen=True)
 class Token:
-    """ Token class
+    """Token class
 
     Args:
         type_: TokenType
         value: str
     """
+
     type_: TokenType
     value: str
 
@@ -93,6 +95,7 @@ class Tokenizer:
         source: The input string to tokenize. If `None`, an empty
             sequence is produced.
     """
+
     def __init__(self, source):
         self.source = source
         self.source_len = len(source) if source is not None else 0
@@ -131,7 +134,7 @@ class Tokenizer:
 
         if char.isdigit():
             return self._number()
-        
+
         if char in "\r\n":
             self.row += 1
             self.column = 0
@@ -175,7 +178,7 @@ class Tokenizer:
             self._advance()
 
         value = self.source[start : self.current]
-        
+
         return Token(type_=TokenType.IDENTIFIER, value=value)
 
     def _number(self):
@@ -225,15 +228,6 @@ class Tokenizer:
                 break
             self._advance()
 
-    def _skip_new_lines(self):
-        """Advance the cursor past any consecutive newline characters."""
-        while not self._at_end():
-            char = self._peek()
-            if char in "\r\n":
-                self._advance()
-            else:
-                break
-
     def _advance(self):
         """Return the current character and advance the input cursor by one.
 
@@ -269,4 +263,3 @@ class Tokenizer:
         raise ValueError(
             f"Unexpected Character: '{char}' at row {self.row} col {column}"
         )
-
