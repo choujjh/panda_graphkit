@@ -69,7 +69,7 @@ class Backend(ABC):
     }
 
     @abstractmethod
-    def resolve_attribute(
+    def resolve_attribute_type(
         self, node: ast.Identifier, attributes: list[ast.Identifier]
     ) -> attribute_types.AttributeType:
         """Resolve the type of an attribute access on a node.

@@ -20,3 +20,6 @@ class Operation:
 
     name: str
     signatures: tuple[Signature, ...]
+
+    def __repr__(self):
+        return f"Operation(name: {self.name} - num signatures: {len(self.signatures)})"

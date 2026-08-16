@@ -19,6 +19,7 @@ class ASTNode:
     """
 
     type_: attribute_types.AttributeType | None = None
+    operation_: attribute_types.AttributeType | None = None
 
 
 @dataclass
@@ -92,7 +93,7 @@ class FunctionCall(ASTNode):
         arguments: List of argument AST nodes.
     """
 
-    function: ASTNode
+    function: Identifier
     arguments: list[ASTNode]
 
 
@@ -136,43 +137,46 @@ def print_ast(node: ASTNode, indent="", is_last=True):
     next_indent = f"{indent}{'    ' if is_last else '│   '}"
 
     type_label = f" type={node.type_}" if node.type_ is not None else ""
+    operation = (
+        f" operation={node.operation_.name}" if node.operation_ is not None else ""
+    )
 
     if isinstance(node, Identifier):
-        print(f"{print_prefix}Identifier:{node.name}{type_label}")
+        print(f"{print_prefix}Identifier:{node.name}{type_label}{operation}")
 
     elif isinstance(node, Literal):
-        print(f"{print_prefix}Literal:{node.value}{type_label}")
+        print(f"{print_prefix}Literal:{node.value}{type_label}{operation}")
 
     elif isinstance(node, UnaryOperation):
-        print(f"{print_prefix}Unary:{node.operator}{type_label}")
+        print(f"{print_prefix}Unary:{node.operator}{type_label}{operation}")
         print_ast(node.operand, indent=next_indent, is_last=True)
 
     elif isinstance(node, FunctionCall):
-        print(f"{print_prefix}Function{type_label}")
+        print(f"{print_prefix}Function{type_label}{operation}")
         print_ast(node.function, indent=next_indent, is_last=False)
         for index, arg in enumerate(node.arguments):
             is_last = index >= len(node.arguments) - 1
             print_ast(arg, next_indent, is_last=is_last)
 
     elif isinstance(node, BinaryOperation):
-        print(f"{print_prefix}BinaryOperation:{node.operation}{type_label}")
+        print(f"{print_prefix}BinaryOperation:{node.operation}{type_label}{operation}")
         print_ast(node.left, indent=next_indent, is_last=False)
         print_ast(node.right, indent=next_indent, is_last=True)
 
     elif isinstance(node, Assignment):
-        print(f"{print_prefix}Assignment{type_label}")
+        print(f"{print_prefix}Assignment{type_label}{operation}")
         print_ast(node.target, indent=next_indent, is_last=False)
         print_ast(node.value, indent=next_indent, is_last=True)
 
     elif isinstance(node, AttributeAccess):
-        print(f"{print_prefix}AttributeAccess{type_label}")
+        print(f"{print_prefix}AttributeAccess{type_label}{operation}")
         print_ast(node.node, indent=next_indent, is_last=False)
         for index, arg in enumerate(node.attributes):
             is_last = index >= len(node.attributes) - 1
             print_ast(arg, next_indent, is_last=is_last)
 
     elif isinstance(node, Program):
-        print(f"{print_prefix}Program{type_label}")
+        print(f"{print_prefix}Program{type_label}{operation}")
         for index, arg in enumerate(node.statments):
             is_last = index >= len(node.statments) - 1
             print_ast(arg, next_indent, is_last=is_last)

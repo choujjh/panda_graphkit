@@ -10,14 +10,14 @@ from core import attribute_types
 from .base import Backend
 
 
-class BackendStub(Backend):
+class MockBackend(Backend):
     """Minimal concrete implementation of Backend for tests and scaffolding.
 
     Maps attribute names to corresponding AttributeTypes for testing
     purposes. Provides basic type resolution without a real graph system.
     """
 
-    def resolve_attribute(
+    def resolve_attribute_type(
         self, node: ast.Identifier, attributes: list[ast.Identifier]
     ) -> attribute_types.AttributeType:
         """Return a default attribute type based on the attribute name.
@@ -46,3 +46,5 @@ class BackendStub(Backend):
         for key, value in return_dict.items():
             if last_attr.name.startswith(key):
                 return value
+
+        raise SyntaxError(f"{node}.{''.join(['[{x}]' for x in attributes])} attribute type not found")

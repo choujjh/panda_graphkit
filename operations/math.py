@@ -15,7 +15,7 @@ SIN = Operation(
     signatures=(
         Signature(
             inputs=[Parameter("value", attribute_types.NUMBER)],
-            output=attribute_types.NUMBER,
+            output=attribute_types.FLOAT,
         ),
     ),
 )
@@ -25,7 +25,7 @@ COS = Operation(
     signatures=(
         Signature(
             inputs=[Parameter("value", attribute_types.NUMBER)],
-            output=attribute_types.NUMBER,
+            output=attribute_types.FLOAT,
         ),
     ),
 )

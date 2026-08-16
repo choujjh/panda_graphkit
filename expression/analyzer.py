@@ -141,6 +141,7 @@ class Analyzer:
         signature_check = self.check_signature(operation, [left_type, right_type])
         if signature_check is not None:
             node.type_ = signature_check
+            node.operation_ = operation
 
         return node.type_
 
@@ -175,6 +176,7 @@ class Analyzer:
         )
         if signature_check is not None:
             node.type_ = signature_check
+            node.operation_ = operation
 
         return node.type_
 
@@ -187,7 +189,7 @@ class Analyzer:
         Args:
             node: An AttributeAccess AST node.
         """
-        type_ = self.backend.resolve_attribute(node.node, node.attributes)
+        type_ = self.backend.resolve_attribute_type(node.node, node.attributes)
         node.type_ = type_
 
     def analyze_assignment(self, node: ast.Assignment):
@@ -205,7 +207,8 @@ class Analyzer:
             target_name = node.target.name
             self.variables[target_name] = node.value
         if isinstance(node.target, ast.AttributeAccess):
-            self.backend.resolve_attribute(node.target.node, node.target.attributes)
+            type_ = self.backend.resolve_attribute_type(node.target.node, node.target.attributes)
+            node.target.type_ = type_
 
         node.type_ = node.value.type_
 

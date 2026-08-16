@@ -30,6 +30,21 @@ class AttributeType:
 
         return False
 
+    def is_compatable(self, other):
+        if not isinstance(other, AttributeType) or other is None:
+            return False
+
+        self_parent = self
+        while self_parent.parent is not None:
+            self_parent = self_parent.parent
+
+        other_parent = other
+        while other_parent.parent is not None:
+            other_parent = other_parent.parent
+
+        return self_parent == other_parent
+        
+
     def __repr__(self):
         return self.name
 
