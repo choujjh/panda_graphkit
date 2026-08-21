@@ -10,6 +10,19 @@ import core.attribute_types as attribute_types
 from core.signature import Parameter, Signature
 from core.operation import Operation
 
+__all__ = [
+    "SIN",
+    "COS",
+    "REMAP",
+    "ADD",
+    "SUM",
+    "SUBTRACT",
+    "MULTIPLY",
+    "PRODUCT",
+    "DIVIDE",
+    "POWER",
+]
+
 SIN = Operation(
     name="sin",
     signatures=(
@@ -51,13 +64,15 @@ ADD = Operation(
     signatures=(
         Signature(
             inputs=[
-                Parameter("value", attribute_types.NUMBER, variadict=True, min_count=2)
+                Parameter("value1", attribute_types.NUMBER),
+                Parameter("value2", attribute_types.NUMBER),
             ],
             output=attribute_types.NUMBER,
         ),
         Signature(
             inputs=[
-                Parameter("value", attribute_types.VECTOR, variadict=True, min_count=2)
+                Parameter("value", attribute_types.VECTOR),
+                Parameter("value", attribute_types.VECTOR),
             ],
             output=attribute_types.VECTOR,
         ),
@@ -74,6 +89,30 @@ ADD = Operation(
                 Parameter("value2", attribute_types.NUMBER),
             ],
             output=attribute_types.VECTOR,
+        ),
+    ),
+)
+
+SUM = Operation(
+    name="sum",
+    signatures=(
+        Signature(
+            inputs=[
+                Parameter("value", attribute_types.NUMBER, variadict=True, min_count=2)
+            ],
+            output=attribute_types.NUMBER,
+        ),
+        Signature(
+            inputs=[
+                Parameter("value", attribute_types.VECTOR, variadict=True, min_count=2)
+            ],
+            output=attribute_types.VECTOR,
+        ),
+        Signature(
+            inputs=[
+                Parameter("value", attribute_types.MATRIX4, variadict=True, min_count=2)
+            ],
+            output=attribute_types.MATRIX4,
         ),
     ),
 )
@@ -117,19 +156,22 @@ MULTIPLY = Operation(
     signatures=(
         Signature(
             inputs=[
-                Parameter("value", attribute_types.NUMBER, variadict=True, min_count=2)
+                Parameter("value1", attribute_types.NUMBER),
+                Parameter("value2", attribute_types.NUMBER),
             ],
             output=attribute_types.NUMBER,
         ),
         Signature(
             inputs=[
-                Parameter("value", attribute_types.VECTOR, variadict=True, min_count=2)
+                Parameter("value1", attribute_types.VECTOR),
+                Parameter("value2", attribute_types.VECTOR),
             ],
             output=attribute_types.VECTOR,
         ),
         Signature(
             inputs=[
-                Parameter("value", attribute_types.MATRIX4, variadict=True, min_count=2)
+                Parameter("value1", attribute_types.MATRIX4),
+                Parameter("value2", attribute_types.MATRIX4),
             ],
             output=attribute_types.MATRIX4,
         ),
@@ -149,17 +191,34 @@ MULTIPLY = Operation(
         ),
         Signature(
             inputs=[
-                Parameter("value1", attribute_types.VECTOR),
+                Parameter("value1", attribute_types.MATRIX4),
                 Parameter("value2", attribute_types.VECTOR),
+            ],
+            output=attribute_types.VECTOR,
+        ),
+    ),
+)
+
+PRODUCT = Operation(
+    name="product",
+    signatures=(
+        Signature(
+            inputs=[
+                Parameter("value", attribute_types.NUMBER, variadict=True, min_count=2)
+            ],
+            output=attribute_types.NUMBER,
+        ),
+        Signature(
+            inputs=[
+                Parameter("value", attribute_types.VECTOR, variadict=True, min_count=2)
             ],
             output=attribute_types.VECTOR,
         ),
         Signature(
             inputs=[
-                Parameter("value1", attribute_types.MATRIX4),
-                Parameter("value2", attribute_types.VECTOR),
+                Parameter("value", attribute_types.MATRIX4, variadict=True, min_count=2)
             ],
-            output=attribute_types.VECTOR,
+            output=attribute_types.MATRIX4,
         ),
     ),
 )
@@ -218,13 +277,51 @@ POWER = Operation(
     ),
 )
 
-__all__ = [
-    "SIN",
-    "COS",
-    "REMAP",
-    "ADD",
-    "SUBTRACT",
-    "MULTIPLY",
-    "DIVIDE",
-    "POWER",
-]
+VECTOR = Operation(
+    name="vector",
+    signatures=(
+        Signature(
+            inputs=[
+                Parameter("x", attribute_types.NUMBER),
+                Parameter("y", attribute_types.NUMBER),
+                Parameter("z", attribute_types.NUMBER),
+                Parameter("w", attribute_types.NUMBER),
+            ],
+            output=attribute_types.VECTOR,
+        ),
+        Signature(
+            inputs=[
+                Parameter("x", attribute_types.NUMBER),
+                Parameter("y", attribute_types.NUMBER),
+                Parameter("z", attribute_types.NUMBER),
+            ],
+            output=attribute_types.VECTOR,
+        ),
+    ),
+)
+MATRIX = Operation(
+    name="matrix",
+    signatures=(
+        Signature(
+            inputs=[
+                Parameter("in00", attribute_types.NUMBER),
+                Parameter("in01", attribute_types.NUMBER),
+                Parameter("in02", attribute_types.NUMBER),
+                Parameter("in03", attribute_types.NUMBER),
+                Parameter("in10", attribute_types.NUMBER),
+                Parameter("in11", attribute_types.NUMBER),
+                Parameter("in12", attribute_types.NUMBER),
+                Parameter("in13", attribute_types.NUMBER),
+                Parameter("in20", attribute_types.NUMBER),
+                Parameter("in21", attribute_types.NUMBER),
+                Parameter("in22", attribute_types.NUMBER),
+                Parameter("in23", attribute_types.NUMBER),
+                Parameter("in30", attribute_types.NUMBER),
+                Parameter("in31", attribute_types.NUMBER),
+                Parameter("in32", attribute_types.NUMBER),
+                Parameter("in33", attribute_types.NUMBER),
+            ],
+            output=attribute_types.MATRIX4,
+        ),
+    ),
+)

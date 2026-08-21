@@ -1,6 +1,3 @@
-from dataclasses import dataclass
-import core.attribute_types as attribute_types
-
 """Abstract syntax tree (AST) node definitions for the expression language.
 
 This module defines simple dataclass-based node types used by the
@@ -8,6 +5,9 @@ parser to represent expressions and statements. It also provides a
 `print_ast` utility for a human-readable tree dump useful during
 development and debugging.
 """
+
+from dataclasses import dataclass
+import core.attribute_types as attribute_types
 
 
 @dataclass(kw_only=True)

@@ -30,6 +30,7 @@ class Parser:
     }
 
     def __init__(self, tokens: list[Token]):
+        """Initialize a parser with a token sequence."""
         self.tokens = tokens
         self.token_len = len(tokens) if tokens is not None else 0
         self.current = 0
@@ -158,7 +159,10 @@ class Parser:
             return ast.Identifier(token.value)
 
         if token.type_ is TokenType.NUMBER:
-            return ast.Literal(token.value)
+            if token.value.find(".") >= 0:
+                return ast.Literal(float(token.value))
+            else:
+                return ast.Literal(int(token.value))
 
         if token.type_ is TokenType.LEFT_PAREN:
             node = self._expression()

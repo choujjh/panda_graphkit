@@ -54,7 +54,7 @@ _OPERATORS = {
     "^": TokenType.CARET,
     "**": TokenType.POWER,
 }
-_OPERATOR_START_STRING = "".join(set([char[0] for char in _OPERATORS.keys()]))
+_OPERATOR_START_STRING = "".join(set([char[0] for char in _OPERATORS]))
 _PUNCTUATION = {
     "(": TokenType.LEFT_PAREN,
     ")": TokenType.RIGHT_PAREN,
@@ -80,6 +80,7 @@ class Token:
     value: str
 
     def __str__(self):
+        """Return a readable representation of the token type and value."""
         return f"Type: {self.type_.name}, Value: {self.value}"
 
 
@@ -97,6 +98,7 @@ class Tokenizer:
     """
 
     def __init__(self, source):
+        """Initialize a tokenizer for the supplied source string."""
         self.source = source
         self.source_len = len(source) if source is not None else 0
         self.current = 0
@@ -143,7 +145,7 @@ class Tokenizer:
         if char in _OPERATOR_START_STRING:
             return self._operator(char)
 
-        if char in _PUNCTUATION.keys():
+        if char in _PUNCTUATION:
             return Token(type_=_PUNCTUATION[char], value=char)
 
         self._raise_value_error(char)
@@ -209,7 +211,7 @@ class Tokenizer:
                 return Token(TokenType.POWER, "**")
             return Token(TokenType.STAR, "*")
 
-        if char in _OPERATORS.keys():
+        if char in _OPERATORS:
             return Token(_OPERATORS[char], char)
 
         self._raise_value_error(char)

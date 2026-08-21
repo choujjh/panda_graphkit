@@ -22,4 +22,5 @@ class Operation:
     signatures: tuple[Signature, ...]
 
     def __repr__(self):
+        """Return a concise representation containing name and signature count."""
         return f"Operation(name: {self.name} - num signatures: {len(self.signatures)})"

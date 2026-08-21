@@ -207,7 +207,9 @@ class Analyzer:
             target_name = node.target.name
             self.variables[target_name] = node.value
         if isinstance(node.target, ast.AttributeAccess):
-            type_ = self.backend.resolve_attribute_type(node.target.node, node.target.attributes)
+            type_ = self.backend.resolve_attribute_type(
+                node.target.node, node.target.attributes
+            )
             node.target.type_ = type_
 
         node.type_ = node.value.type_
@@ -254,7 +256,7 @@ class Analyzer:
             ):
                 if all(arg_type.is_a(first_input.type_) for arg_type in arg_types):
                     if signature.output in [attribute_types.NUMBER]:
-                        return self.infer_numeric_return_type(arg_types)
+                        return attribute_types.infer_return_type(arg_types)
                     return signature.output
             if len(arg_types) == len(signature.inputs):
                 if all(
@@ -262,29 +264,9 @@ class Analyzer:
                     for arg_type, param in zip(arg_types, signature.inputs)
                 ):
                     if signature.output in [attribute_types.NUMBER]:
-                        return self.infer_numeric_return_type(arg_types)
+                        return attribute_types.infer_return_type(arg_types)
                     return signature.output
 
         raise TypeError(
             f"No matching signature found for operation '{operation.name}' with argument types {arg_types}"
         )
-
-    def infer_numeric_return_type(
-        self, type_list: list[attribute_types.AttributeType]
-    ) -> attribute_types.AttributeType:
-        """Infer the most specific numeric return type from argument types.
-
-        Returns FLOAT if any argument is FLOAT, INT if all are INT,
-        otherwise NUMBER.
-
-        Args:
-            type_list: List of argument types.
-
-        Returns:
-            The inferred numeric return type (INT, FLOAT, or NUMBER).
-        """
-        if any(type_list.is_a(attribute_types.FLOAT) for type_list in type_list):
-            return attribute_types.FLOAT
-        if all(type_list.is_a(attribute_types.INT) for type_list in type_list):
-            return attribute_types.INT
-        return attribute_types.NUMBER
