@@ -47,4 +47,6 @@ class MockBackend(Backend):
             if last_attr.name.startswith(key):
                 return value
 
-        raise SyntaxError(f"{node}.{''.join(['[{x}]' for x in attributes])} attribute type not found")
+        raise SyntaxError(
+            f"{node}.{''.join(['[{x}]' for x in attributes])} attribute type not found"
+        )
