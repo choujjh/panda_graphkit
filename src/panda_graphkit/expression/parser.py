@@ -9,7 +9,7 @@ calls, attribute access, indexing, unary and binary operators, and
 assignment statements.
 """
 
-from .lexer import TokenType, Token
+from .tokenizer import TokenType, Token
 from . import ast
 
 
@@ -154,7 +154,6 @@ class Parser:
         `SyntaxError` on unexpected tokens.
         """
         token = self._advance()
-
         if token.type_ is TokenType.IDENTIFIER:
             return ast.Identifier(token.value)
 
@@ -169,7 +168,6 @@ class Parser:
             self._expect(TokenType.RIGHT_PAREN)
 
             return node
-
         raise SyntaxError(f"Unexpected token: {token.type_}")
 
     def _flatten_attribute_access(self, node: ast.ASTNode, attributes):

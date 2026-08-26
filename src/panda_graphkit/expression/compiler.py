@@ -1,11 +1,10 @@
 """Compile analyzed expression ASTs into optimized computation graphs."""
 
 from . import ast
-from core import graph, operation
-from backend import base
-from backend.base import BackendNodeOptimization
-from core import attribute_types
-import operations.math as ops_math
+from ..core import graph, Operation, AttributeType, infer_return_type
+from ..backend import base
+from ..backend.base import BackendNodeOptimization
+from ..operations import math as ops_math
 
 
 class Compiler:
@@ -31,7 +30,7 @@ class Compiler:
         if isinstance(ast_node, ast.Assignment):
             if isinstance(ast_node.target, ast.AttributeAccess):
                 input_port = self._attribute_access_to_graph(
-                    ast_node.target, as_output_port=False
+                    ast_node.target, as_output_port=True
                 )
                 output_port = self.ast_to_graph(ast_node.value, prefix, name)
 
@@ -201,8 +200,8 @@ class Compiler:
     def _traverse_flatten_nodes(
         self,
         node: graph.Node,
-        operations: list[operation.Operation],
-        types_: attribute_types.AttributeType = None,
+        operations: list[Operation],
+        types_: AttributeType = None,
     ) -> tuple[list[graph.Node], list[graph.OutputPort]]:
         """Collect a compatible operation chain and its external inputs."""
         nodes = list()
@@ -282,9 +281,7 @@ class Compiler:
                 continue
 
             val = None
-            type_ = attribute_types.infer_return_type(
-                [x.source.type_ for x in input_connections]
-            )
+            type_ = infer_return_type([x.source.type_ for x in input_connections])
 
             constructor = self.backend.resolve_constructor(node.operation.name)
             # if it's a constructed data type

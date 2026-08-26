@@ -188,6 +188,8 @@ class Graph:
         self._node_name_counters = {}
 
         for node in self.get_nodes():
+            if isinstance(node, BackendNode):
+                continue
             strip_name = re.sub(r"\d+$", "", node.name)
 
             node.clean_port_names()
@@ -241,6 +243,26 @@ class Port:
     def __str__(self):
         """Return a compact description of this port and its owner node."""
         return f"{type(self).__name__}(name: {self.name}, type: {self.type_.name}, node:{self.node.name})"
+
+    def get_port_index(self) -> int:
+        """Return this port's zero-based position among its node's ports.
+
+        Ports are ordered by their names, matching the ordering used by the
+        graph's input and output mappings.
+
+        Returns:
+            The port index, or ``None`` if this port is not registered on its
+            node.
+        """
+        port_list = [self.node.inputs[port] for port in sorted(self.node.inputs.keys())]
+        if isinstance(self, OutputPort):
+            port_list = [
+                self.node.outputs[port] for port in sorted(self.node.outputs.keys())
+            ]
+
+        if self in port_list:
+            return port_list.index(self)
+        return None
 
 
 class InputPort(Port):
@@ -368,6 +390,49 @@ class Node:
         port = port_type(name, type_, self)
         port_map[name] = port
         return port
+
+    def get_operation_compatable_signature(self) -> operation.Signature:
+        """Return the operation signature compatible with this node's ports.
+
+        The operation inputs are checked against the node's input types, then
+        the resulting output types are checked against the node's outputs.
+
+        Returns:
+            The matching signature, or ``None`` when the node has no
+            operation, has the wrong number of outputs, or has incompatible
+            output types.
+        """
+        sig = self.get_signature()
+        if self.operation is None:
+            return None
+        _, ret_sig = operation.check_signature(
+            self.operation, [x.type_ for x in sig.inputs]
+        )
+        output_ports = list(self.outputs.values())
+        if len(ret_sig.outputs) != len(output_ports):
+            return None
+        for parm, port in zip(ret_sig.outputs, output_ports):
+            if not parm.type_.is_compatable(port.type_):
+                return None
+        return ret_sig
+
+    def get_signature(self) -> operation.Signature:
+        """Build a signature from the node's current input and output ports.
+
+        Input parameters receive generated names based on their position;
+        output parameters retain only their types because node output names
+        are not part of the operation signature.
+
+        Returns:
+            A signature describing the node's port types.
+        """
+        inputs = tuple(
+            operation.Parameter(f"value{index}", input.type_)
+            for index, input in enumerate(self.inputs.values())
+        )
+        outputs = tuple(output.type_ for output in self.outputs.values())
+
+        return operation.Signature(inputs=inputs, outputs=outputs)
 
     def get_next_numeric_port_name(self, name: str) -> str:
         """Return the next unique numbered name for a port base name."""

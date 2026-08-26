@@ -5,7 +5,11 @@ input/output kinds foroperations (Number, Vector, Bool, etc.). Use these
 types in `Signature` and validation logic.
 """
 
+from __future__ import annotations
+from dataclasses import dataclass
 
+
+@dataclass(frozen=True)
 class AttributeType:
     """A simple nominal type with optional parent for subtyping.
 
@@ -13,10 +17,8 @@ class AttributeType:
     subtype of another by following the `parent` chain.
     """
 
-    def __init__(self, name: str, parent=None):
-        """Create a type with a name and optional parent type."""
-        self.name = name
-        self.parent = parent
+    name: str
+    parent: AttributeType | None = None
 
     def is_a(self, other):
         """Return whether this type is equal to or derives from ``other``."""
@@ -103,4 +105,5 @@ __all__ = [
     "BOOL",
     "MATRIX4",
     "STRING",
+    "infer_return_type",
 ]

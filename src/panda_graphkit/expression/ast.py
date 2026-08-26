@@ -7,7 +7,7 @@ development and debugging.
 """
 
 from dataclasses import dataclass
-import core.attribute_types as attribute_types
+from ..core import AttributeType
 
 
 @dataclass(kw_only=True)
@@ -18,8 +18,8 @@ class ASTNode:
     plain dataclasses and carry no behaviour beyond their fields.
     """
 
-    type_: attribute_types.AttributeType | None = None
-    operation_: attribute_types.AttributeType | None = None
+    type_: AttributeType | None = None
+    operation_: AttributeType | None = None
 
 
 @dataclass

@@ -6,10 +6,9 @@ resolves operations and attributes using the backend, and infers
 numeric return types based on input argument types.
 """
 
-import expression.ast as ast
-import core.attribute_types as attribute_types
-import core.operation as operation
-import backend.base as base
+from . import ast
+from ..core import STRING, FLOAT, INT, check_signature
+from ..backend import base
 
 
 class Analyzer:
@@ -90,9 +89,9 @@ class Analyzer:
         """
         value = node.value
 
-        str_type = attribute_types.STRING
-        float_type = attribute_types.FLOAT
-        int_type = attribute_types.INT
+        str_type = STRING
+        float_type = FLOAT
+        int_type = INT
 
         if isinstance(value, int):
             node.type_ = int_type
@@ -136,12 +135,12 @@ class Analyzer:
         left_type = node.left.type_
         right_type = node.right.type_
 
-        operation = self.backend.resolve_operation(node.operation)
+        operation_ = self.backend.resolve_operation(node.operation)
 
-        signature_check = self.check_signature(operation, [left_type, right_type])
+        signature_check, _ = check_signature(operation_, [left_type, right_type])
         if signature_check is not None:
             node.type_ = signature_check
-            node.operation_ = operation
+            node.operation_ = operation_
 
         return node.type_
 
@@ -165,18 +164,18 @@ class Analyzer:
             self.analyze(argument)
 
         if isinstance(node.function, ast.Identifier):
-            operation = self.backend.resolve_operation(node.function.name)
+            operation_ = self.backend.resolve_operation(node.function.name)
         else:
             raise TypeError(
                 f"Unsupported function type: {type(node.function).__name__}"
             )
 
-        signature_check = self.check_signature(
-            operation, [arg.type_ for arg in node.arguments]
+        signature_check, _ = check_signature(
+            operation_, [arg.type_ for arg in node.arguments]
         )
         if signature_check is not None:
             node.type_ = signature_check
-            node.operation_ = operation
+            node.operation_ = operation_
 
         return node.type_
 
@@ -224,49 +223,3 @@ class Analyzer:
         """
         for statement in node.statments:
             self.analyze(statement)
-
-    def check_signature(
-        self,
-        operation: operation.Operation,
-        arg_types: list[attribute_types.AttributeType],
-    ) -> attribute_types.AttributeType:
-        """Check if argument types match a signature in the operation.
-
-        Iterates through operation signatures and tests if the provided
-        argument types match via subtype checking (is_a). Handles both
-        variadic and fixed-arity parameters.
-
-        Args:
-            operation: The Operation to check signatures for.
-            arg_types: List of argument types to match against signatures.
-
-        Returns:
-            The return type of the matching signature. For numeric returns,
-            infers the most specific numeric type (INT/FLOAT).
-
-        Raises:
-            TypeError: If no matching signature is found.
-        """
-        for signature in operation.signatures:
-            first_input = signature.inputs[0] if signature.inputs else None
-            if (
-                first_input
-                and first_input.variadict
-                and len(arg_types) >= first_input.min_count
-            ):
-                if all(arg_type.is_a(first_input.type_) for arg_type in arg_types):
-                    if signature.output in [attribute_types.NUMBER]:
-                        return attribute_types.infer_return_type(arg_types)
-                    return signature.output
-            if len(arg_types) == len(signature.inputs):
-                if all(
-                    arg_type.is_a(param.type_)
-                    for arg_type, param in zip(arg_types, signature.inputs)
-                ):
-                    if signature.output in [attribute_types.NUMBER]:
-                        return attribute_types.infer_return_type(arg_types)
-                    return signature.output
-
-        raise TypeError(
-            f"No matching signature found for operation '{operation.name}' with argument types {arg_types}"
-        )

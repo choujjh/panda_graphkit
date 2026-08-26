@@ -4,10 +4,14 @@ This module provides a stubbed backend implementation that assigns
 default attribute types for testing purposes.
 """
 
-from expression import ast
-from core import attribute_types
+from __future__ import annotations
+from ..core import AttributeType, INT, FLOAT, VECTOR2, VECTOR3, BOOL, MATRIX4
 
 from .base import Backend
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..expression import ast
 
 
 class MockBackend(Backend):
@@ -19,7 +23,7 @@ class MockBackend(Backend):
 
     def resolve_attribute_type(
         self, node: ast.Identifier, attributes: list[ast.Identifier]
-    ) -> attribute_types.AttributeType:
+    ) -> AttributeType:
         """Return a default attribute type based on the attribute name.
 
         Matches the last attribute name against known type prefixes
@@ -35,12 +39,12 @@ class MockBackend(Backend):
         last_attr = attributes[-1] if attributes else "float"
 
         return_dict = {
-            "int": attribute_types.INT,
-            "float": attribute_types.FLOAT,
-            "vector2": attribute_types.VECTOR2,
-            "vector3": attribute_types.VECTOR3,
-            "bool": attribute_types.BOOL,
-            "matrix4": attribute_types.MATRIX4,
+            "int": INT,
+            "float": FLOAT,
+            "vector2": VECTOR2,
+            "vector3": VECTOR3,
+            "bool": BOOL,
+            "matrix4": MATRIX4,
         }
 
         for key, value in return_dict.items():
@@ -50,3 +54,9 @@ class MockBackend(Backend):
         raise SyntaxError(
             f"{node}.{''.join(['[{x}]' for x in attributes])} attribute type not found"
         )
+
+    def _create_nodes(self, graph):
+        pass
+
+    def _create_connections(self, graph, node_dict):
+        pass
