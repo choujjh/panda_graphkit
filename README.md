@@ -27,7 +27,7 @@ and Unreal.
 Expression
     │
     ▼
-  Lexer
+  Tokenizer
     │
     ▼
   Parser
@@ -64,7 +64,7 @@ package format.
 
 There are two ways to make Panda GraphKit available in Maya.
 
-### Option 1: PYTHONPATH
+### PYTHONPATH
 
 For development, using `PYTHONPATH` is recommended.
 
@@ -85,3 +85,35 @@ panda_graphkit/
 
 add `PYTHONPATH=C:/path/to/panda_graphkit/src` to maya.env file. if `PYTHONPATH`
 is already in use, add `;` inbetween each path
+
+### Usage
+node creation and connection
+```
+from panda_graphkit.maya import create_node
+
+t1 = create_node("transform", t=[0, 10, 0])
+t2 = create_node("transform", t=[3, 5, 0])
+t3 = create_node("transform", )
+t4 = create_node("transform", )
+len1 = create_node("distanceBetween", inMatrix1=t1["worldMatrix"][0], inMatrix2=t2["worldMatrix"][0])
+len2 = create_node("distanceBetween", inMatrix1=t2["worldMatrix"][0], inMatrix2=t3["worldMatrix"][0])
+len3 = create_node("distanceBetween", inMatrix1=t3["worldMatrix"][0], inMatrix2=t1["worldMatrix"][0])
+```
+
+expression
+```
+from panda_graphkit.expression import build_expression
+from panda_graphkit.backend.maya import maya_backend
+
+exp_str = f"""
+  c_squared = {len1["distance"]} ** 2
+  a_squared = {len2["distance"]} ** 2
+  b_squared = {len3["distance"]} ** 2
+  numer = c_squared - (a_squared + b_squared)
+  denom = 2 * {len2["distance"]} * {len3["distance"]}
+  {t4["rx"]} = numer / denom
+"""
+
+maya_backend_ = maya_backend.MayaBackend()
+graph_ = build_expression(exp_str, "loc", "network", backend=maya_backend_)
+```
