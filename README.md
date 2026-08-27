@@ -115,5 +115,5 @@ exp_str = f"""
 """
 
 maya_backend_ = maya_backend.MayaBackend()
-graph_ = build_expression(exp_str, "loc", "network", backend=maya_backend_)
+graph = build_expression(exp_str, "loc", "network", backend=maya_backend_)
 ```

@@ -92,13 +92,40 @@ class MayaBackend(Backend):
                     maya_node = port_map["node"]
                     node_map = port_map["map"]
                 attr_list.append(self._get_attr(port, maya_node, node_map))
+            source_attr = attr_list[0]
+            dest_attr = attr_list[1]
+            
+            if not isinstance(source_attr, MAttr) or source_attr.type_ == dest_attr.type_:
+                dest_attr.set_connect(source_attr)
 
-            if not isinstance(attr_list[0], MAttr):
-                attr_list[1].set(attr_list[0])
-            else:
-                attr_list[0].connect(attr_list[1])
+            elif source_attr.has_children() and dest_attr.has_children():
+                source_len = len(source_attr)
+                dest_len = len(dest_attr)
+                if source_len == dest_len:
+                    dest_attr.set_connect(source_attr)
+                else:
+                    min_len = min(source_len, dest_len)
+                    source_list = [x for x in source_attr][:min_len]
+                    dest_list = [x for x in dest_attr][:min_len]
+
+                    for source_chld_attr, dest_chld_attr in zip(source_list, dest_list):
+                        dest_chld_attr.set_connect(source_chld_attr)
+
+            elif dest_attr.has_children() and not source_attr.has_children():
+                for dest_chld_attr in dest_attr:
+                    dest_chld_attr.set_connect(source_attr)
 
     def _get_attr(self, port: Port, maya_node: MNode, node_map: NodeMap) -> MAttr:
+        """Gets attribute from mapped maya node
+
+        Args:
+            port (Port): _description_
+            maya_node (MNode): _description_
+            node_map (NodeMap): _description_
+
+        Returns:
+            MAttr:
+        """
         node = port.node
 
         if isinstance(node, ConstNode):

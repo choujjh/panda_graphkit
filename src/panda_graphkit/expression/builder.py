@@ -31,6 +31,6 @@ def build_expression(
     compiler_ = compiler.Compiler(backend)
     compiler_.compile(program, prefix, name)
 
-    backend.build_graph(compiler_.graph_)
+    backend.build_graph(compiler_.graph)
 
-    return compiler_.graph_
+    return compiler_.graph

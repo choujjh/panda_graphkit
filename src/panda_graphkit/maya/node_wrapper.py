@@ -1059,13 +1059,7 @@ class Node:
             cmds.warning(f"{self.name}.{attr_name} doesn't not exist.")
             return
 
-        if set_when_data_is_attr and isinstance(attr_data, Attr):
-            attr_data = attr_data.value
-
-        if isinstance(attr_data, Attr):
-            self[attr_name] << attr_data
-        else:
-            self[attr_name].set(attr_data)
+        self[attr_name].set_connect(attr_data, set_when_data_is_attr)
 
     # operator overloads
     def __str__(self):
@@ -1661,6 +1655,22 @@ class Attr:
             str:
         """
         return plug.attribute().apiTypeStr
+
+    def set_connect(self, attr_data, set_when_data_is_attr: bool = False):
+        """Connect to attribute if it can, but sets data otherwise
+        
+        Args:
+            attr_name (str):
+            data (Any):
+            set_when_data_is_attr (bool):
+        """
+        if set_when_data_is_attr and isinstance(attr_data, Attr):
+            attr_data = attr_data.value
+
+        if isinstance(attr_data, Attr):
+            self << attr_data
+        else:
+            self.set(attr_data)
 
     def connect(self, attr: Attr):
         """Connect this attribute to a destination attribute.

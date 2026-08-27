@@ -1,7 +1,7 @@
 """Compile analyzed expression ASTs into optimized computation graphs."""
 
 from . import ast
-from ..core import graph, Operation, AttributeType, infer_return_type
+from ..core import Graph, Node, ConstNode, BackendNode, Port, OutputPort, Operation, AttributeType, infer_return_type
 from ..backend import base
 from ..backend.base import BackendNodeOptimization
 from ..operations import math as ops_math
@@ -12,7 +12,7 @@ class Compiler:
 
     def __init__(self, backend: base.Backend):
         """Initialize a compiler using the given backend."""
-        self.graph_ = graph.Graph()
+        self.graph = Graph()
         self.variables = {}
         self.backend = backend
 
@@ -20,9 +20,9 @@ class Compiler:
         """Compile an AST, optimize its graph, and normalize its names."""
         self.ast_to_graph(ast_node, prefix, name)
         self.optimize_graph(prefix, name)
-        self.graph_.clean_names()
+        self.graph.clean_names()
 
-    def ast_to_graph(self, ast_node: ast.ASTNode, prefix: str, name: str) -> graph.Port:
+    def ast_to_graph(self, ast_node: ast.ASTNode, prefix: str, name: str) -> Port:
         """Convert one AST node and its children into graph ports."""
         nice_name = f"{name}_" if name != "" else ""
         full_prefix = f"{prefix}_{nice_name}"
@@ -34,7 +34,7 @@ class Compiler:
                 )
                 output_port = self.ast_to_graph(ast_node.value, prefix, name)
 
-                self.graph_.connect(output_port, input_port)
+                self.graph.connect(output_port, input_port)
                 return output_port
 
             if isinstance(ast_node.target, ast.Identifier):
@@ -52,7 +52,7 @@ class Compiler:
             left_port = self.ast_to_graph(ast_node.left, prefix, name)
             right_port = self.ast_to_graph(ast_node.right, prefix, name)
 
-            node = self.graph_.add_node(
+            node = self.graph.add_node(
                 f"{full_prefix}{ast_node.operation_.name}", ast_node.operation_
             )
 
@@ -61,13 +61,13 @@ class Compiler:
             right_input = ast_node.right
             for input, port in zip([left_input, right_input], [left_port, right_port]):
                 input_port = node.add_input(type_=input.type_)
-                self.graph_.connect(port, input_port)
+                self.graph.connect(port, input_port)
             output = node.add_output(type_=ast_node.type_)
 
             return output
 
         if isinstance(ast_node, ast.FunctionCall):
-            node = self.graph_.add_node(
+            node = self.graph.add_node(
                 f"{full_prefix}{ast_node.function.name}", ast_node.operation_
             )
 
@@ -75,7 +75,7 @@ class Compiler:
                 child_port = self.ast_to_graph(attribute, prefix, name)
                 input_port = node.add_input(attribute.type_)
 
-                self.graph_.connect(child_port, input_port)
+                self.graph.connect(child_port, input_port)
 
             output = node.add_output(type_=ast_node.type_)
 
@@ -87,9 +87,9 @@ class Compiler:
             return self.variables[ast_node.name]
 
         if isinstance(ast_node, ast.Literal):
-            node = self.graph_.add_node(
-                node=graph.ConstNode(
-                    name=self.graph_.get_next_numeric_name(
+            node = self.graph.add_node(
+                node=ConstNode(
+                    name=self.graph.get_next_numeric_name(
                         f"{ast_node.type_.name}Const"
                     ),
                     type_=ast_node.type_,
@@ -110,11 +110,11 @@ class Compiler:
 
     def _attribute_access_to_graph(
         self, ast_node: ast.AttributeAccess, as_output_port=True
-    ) -> graph.Port:
+    ) -> Port:
         """Convert a backend attribute access into an input or output port."""
         name = ast_node.node.name
 
-        node = self.graph_.add_node(node=graph.BackendNode(name=name))
+        node = self.graph.add_node(node=BackendNode(name=name))
 
         attributes = []
         for attribute in ast_node.attributes:
@@ -163,8 +163,8 @@ class Compiler:
         replaced_ops = backend_node_optimize.checked_ops
         merge_op = backend_node_optimize.operand
 
-        for node in list(self.graph_.get_nodes()):
-            top_node = self.graph_.get_upstream_node(
+        for node in list(self.graph.get_nodes()):
+            top_node = self.graph.get_upstream_node(
                 node, lambda x: x.operation in replaced_ops
             )
             if (
@@ -173,7 +173,7 @@ class Compiler:
                 or top_node == node
             ):
                 continue
-            dest_connections = self.graph_.output_dest_ports(top_node)
+            dest_connections = self.graph.output_dest_ports(top_node)
             output_port_type = list(top_node.outputs.values())[0].type_
             nodes, output_ports = self._traverse_flatten_nodes(top_node, replaced_ops)
             if len(nodes) == 1:
@@ -182,27 +182,27 @@ class Compiler:
             deleted_nodes.extend(nodes)
             changed = True
             for curr_node in nodes:
-                self.graph_.delete_node(curr_node)
+                self.graph.delete_node(curr_node)
 
-            added_node = self.graph_.add_node(
+            added_node = self.graph.add_node(
                 name=f"{full_prefix}{merge_op.name}", operation_=merge_op
             )
             for output_port in output_ports:
                 added_input = added_node.add_input(output_port.type_)
-                self.graph_.connect(output_port, added_input)
+                self.graph.connect(output_port, added_input)
 
             dest_port = added_node.add_output(output_port_type)
             for dest in dest_connections:
-                self.graph_.connect(dest_port, dest)
+                self.graph.connect(dest_port, dest)
 
         return changed
 
     def _traverse_flatten_nodes(
         self,
-        node: graph.Node,
+        node: Node,
         operations: list[Operation],
         types_: AttributeType = None,
-    ) -> tuple[list[graph.Node], list[graph.OutputPort]]:
+    ) -> tuple[list[Node], list[OutputPort]]:
         """Collect a compatible operation chain and its external inputs."""
         nodes = list()
         output_ports = list()
@@ -213,7 +213,7 @@ class Compiler:
                 return [node], []
             types_ = node.output_types[0]
 
-        for input_port in self.graph_.input_src_ports(node):
+        for input_port in self.graph.input_src_ports(node):
             if input_port.node.operation in operations:
                 child_nodes, child_output_ports = self._traverse_flatten_nodes(
                     input_port.node, operations, types_
@@ -231,7 +231,7 @@ class Compiler:
         """Remove identity constants and collapse resulting single-input nodes."""
         changed = False
         deleted_nodes = []
-        for node in list(self.graph_.get_nodes()):
+        for node in list(self.graph.get_nodes()):
             if node in deleted_nodes:
                 continue
             identity_val = None
@@ -247,15 +247,15 @@ class Compiler:
                 source_port = input_port.connection.source
                 source_node = input_port.connection.source.node
 
-                if isinstance(source_node, graph.ConstNode):
+                if isinstance(source_node, ConstNode):
                     if source_node.value == identity_val:
                         changed = True
-                        self.graph_.delete_port(input_port)
+                        self.graph.delete_port(input_port)
                         if len(list(source_port.connections.values())) == 0:
                             deleted_nodes.append(source_node)
-                            self.graph_.delete_node(source_node)
+                            self.graph.delete_node(source_node)
 
-            changed |= self.graph_.collapse_single_input_node(node)
+            changed |= self.graph.collapse_single_input_node(node)
 
         return changed
 
@@ -263,7 +263,7 @@ class Compiler:
         """Evaluate operations whose inputs are all compile-time constants."""
         changed = False
         deleted_nodes = []
-        for node in list(self.graph_.get_nodes()):
+        for node in list(self.graph.get_nodes()):
             if node in deleted_nodes:
                 continue
             input_connections = [
@@ -274,7 +274,7 @@ class Compiler:
             input_connections = [
                 x
                 for x in input_connections
-                if isinstance(x.source.node, graph.ConstNode)
+                if isinstance(x.source.node, ConstNode)
             ]
 
             if len(input_connections) <= 1:
@@ -305,24 +305,24 @@ class Compiler:
 
             for connection in input_connections:
                 deleted_nodes.append(connection.source.node)
-                self.graph_.disconnect(connection)
-                self.graph_.delete_port(connection.destination)
+                self.graph.disconnect(connection)
+                self.graph.delete_port(connection.destination)
                 if (
-                    len(list(self.graph_.output_dest_ports(connection.source.node)))
+                    len(list(self.graph.output_dest_ports(connection.source.node)))
                     == 0
                 ):
-                    self.graph_.delete_node(connection.source.node)
+                    self.graph.delete_node(connection.source.node)
 
-            new_const = self.graph_.add_node(
-                node=graph.ConstNode(
-                    self.graph_.get_next_numeric_name(f"{type_.name}Const"),
+            new_const = self.graph.add_node(
+                node=ConstNode(
+                    self.graph.get_next_numeric_name(f"{type_.name}Const"),
                     type_=type_,
                     value=val,
                 )
             )
             input_port = node.add_input(type_=type_)
-            self.graph_.connect(new_const.output_port, input_port)
+            self.graph.connect(new_const.output_port, input_port)
 
-            self.graph_.collapse_single_input_node(node)
+            self.graph.collapse_single_input_node(node)
 
         return changed
