@@ -76,7 +76,6 @@ class Graph:
     ):
         """Walk upstream while nodes satisfy a predicate and type constraints."""
         current_node = node
-
         node_type = node.output_types
         if len(node_type) != 1:
             return current_node
@@ -453,6 +452,11 @@ class Node:
         name = f"{name}{self._port_counters[name]}"
 
         return name
+
+    def get_port_len(self, use_input_ports=True):
+        if use_input_ports:
+            return len(self.inputs.keys())
+        return len(self.outputs.keys())
 
     def __repr__(self):
         """Return a representation containing node identity and port types."""

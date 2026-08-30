@@ -84,6 +84,7 @@ PRODUCT = Operation(
     name="product",
     signatures=(
         sig_math.NV_O_N_SIG,
+        sig_math.MV_O_M_SIG,
         sig_math.NUVV_O_V_SIG,
         sig_math.M_V_O_V_SIG,
     ),

@@ -239,6 +239,7 @@ PRODUCT = OperationMap(
             mapped_node_type="multMatrix",
             input_attributes=("matrixIn",),
             output_attributes=("matrixSum",),
+            invert_input_indicies=True
         ),
     ],
 )

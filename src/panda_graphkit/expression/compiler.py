@@ -172,7 +172,6 @@ class Compiler:
         deleted_nodes = []
         replaced_ops = backend_node_optimize.checked_ops
         merge_op = backend_node_optimize.operand
-
         for node in list(self.graph.get_nodes()):
             top_node = self.graph.get_upstream_node(
                 node, lambda x: x.operation in replaced_ops, merge_op

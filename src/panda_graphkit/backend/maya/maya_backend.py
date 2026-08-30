@@ -20,7 +20,6 @@ from ...maya import (
     Node as MNode,
     Attr as MAttr,
 )
-from ...expression.ast import Identifier, Literal
 from . import maya_constants
 
 

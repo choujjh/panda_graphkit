@@ -44,6 +44,7 @@ class NodeMap:
     mapped_node_type: str
     input_attributes: tuple[str]
     output_attributes: tuple[str]
+    invert_input_indicies: bool = False
     node_init: dict[str:Any] = field(default_factory=dict)
 
     def attr_mapping(self) -> dict[str : dict[str : str | bool]]:
@@ -93,6 +94,8 @@ class NodeMap:
         """
         port_index = port.get_port_index()
         is_input_port = isinstance(port, InputPort)
+        if self.invert_input_indicies:
+            port_index = port.node.get_port_len(is_input_port) - port_index - 1
         attr_map = self.attr_mapping()["input" if is_input_port else "output"]
         attrs = self.input_attributes if is_input_port else self.output_attributes
         attr_list = list(attr_map.values())
