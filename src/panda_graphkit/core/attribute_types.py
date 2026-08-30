@@ -86,7 +86,8 @@ def infer_return_type(type_list: list[AttributeType]) -> AttributeType:
         return INT
     return NUMBER
 
-def types_is_compatable(types_a:tuple[AttributeType], types_b:tuple[AttributeType]):
+
+def types_is_compatable(types_a: tuple[AttributeType], types_b: tuple[AttributeType]):
     """Return whether a type or tuple of types is compatible with another type set.
 
     Args:
@@ -102,6 +103,7 @@ def types_is_compatable(types_a:tuple[AttributeType], types_b:tuple[AttributeTyp
         if type_a.is_compatable(types_b):
             return True
     return False
+
 
 # Common built-in types
 NUMBER = AttributeType("Number")

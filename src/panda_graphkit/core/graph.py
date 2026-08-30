@@ -72,7 +72,7 @@ class Graph:
         return [x for x in input_ports.node]
 
     def get_upstream_node(
-        self, node: "Node", predicate: Callable, override_op:operation.Operation
+        self, node: "Node", predicate: Callable, override_op: operation.Operation
     ):
         """Walk upstream while nodes satisfy a predicate and type constraints."""
         current_node = node
@@ -80,7 +80,9 @@ class Graph:
         if len(node_type) != 1:
             return current_node
         node_type = node_type[0]
-        replace_out_type, replace_sig = operation.match_signature(override_op, [x.types_ for x in node.get_signature().inputs])
+        replace_out_type, replace_sig = operation.match_signature(
+            override_op, [x.types_ for x in node.get_signature().inputs]
+        )
         if any(x is None for x in [replace_out_type, replace_sig]):
             return node
         check_sig_op = operation.Operation("check_sig", signatures=replace_sig)
@@ -90,15 +92,15 @@ class Graph:
                 break
             output_node = output_nodes[0]
             output_types = output_node.output_types
-            if not len(output_types) == 1 and node_type.is_compatable(
-                output_types[0]
-            ):
+            if not len(output_types) == 1 and node_type.is_compatable(output_types[0]):
                 break
             if not predicate(output_node):
                 break
             # if different signatures
             current_node_sig = current_node.get_signature()
-            _, sig = operation.match_signature(check_sig_op, [x.types_ for x in current_node_sig.inputs])
+            _, sig = operation.match_signature(
+                check_sig_op, [x.types_ for x in current_node_sig.inputs]
+            )
             if sig is None:
                 break
 
@@ -435,7 +437,10 @@ class Node:
             operation.Parameter(f"value{index}", input.type_)
             for index, input in enumerate(self.inputs.values())
         )
-        outputs = tuple(operation.Parameter(f"output{index}", output.type_) for index, output in enumerate(self.outputs.values()))
+        outputs = tuple(
+            operation.Parameter(f"output{index}", output.type_)
+            for index, output in enumerate(self.outputs.values())
+        )
 
         return operation.Signature(inputs=inputs, outputs=outputs)
 

@@ -129,7 +129,7 @@ def check_signature(
         TypeError: If no matching signature is found.
     """
     out_attr_type, signature = match_signature(operation, arg_types)
-        
+
     if out_attr_type is None and signature is None:
         raise TypeError(
             f"No matching signature found for operation '{operation.name}' with argument types {arg_types}"
@@ -137,12 +137,13 @@ def check_signature(
 
     return out_attr_type, signature
 
+
 def match_signature(
     operation: Operation,
     arg_types: list[attribute_types.AttributeType],
 ) -> tuple[attribute_types.AttributeType, Signature]:
     """tries to find a matching signature. returns None otherwise
-    
+
     Iterates through operation signatures and tests if the provided
     argument types match via subtype checking (is_a). Handles both
     variadic and fixed-arity parameters.
@@ -167,7 +168,8 @@ def match_signature(
             and len(arg_types) >= first_input.min_count
         ):
             if all(
-                types_is_compatable(arg_type, first_input.types_) for arg_type in arg_types
+                types_is_compatable(arg_type, first_input.types_)
+                for arg_type in arg_types
             ):
                 if signature.outputs[0] in [attribute_types.NUMBER]:
                     return attribute_types.infer_return_type(arg_types), signature
@@ -182,5 +184,3 @@ def match_signature(
                 return signature.outputs[0].types_[0], signature
 
     return None, None
-
-    

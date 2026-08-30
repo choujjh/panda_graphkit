@@ -213,6 +213,7 @@ MULTIPLY = OperationMap(
             mapped_node_type="multMatrix",
             input_attributes=("matrixIn[0]", "matrixIn[1]"),
             output_attributes=("matrixSum",),
+            invert_input_indicies=True,
         ),
         NodeMap(
             operation_name=ops_math.MULTIPLY.name,
@@ -239,7 +240,7 @@ PRODUCT = OperationMap(
             mapped_node_type="multMatrix",
             input_attributes=("matrixIn",),
             output_attributes=("matrixSum",),
-            invert_input_indicies=True
+            invert_input_indicies=True,
         ),
     ],
 )

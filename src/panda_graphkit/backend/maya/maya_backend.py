@@ -67,7 +67,9 @@ class MayaBackend(Backend):
             for attribute in filtered_attributes:
                 attr = attr[attribute]
         except KeyError as e:
-            raise RuntimeError(f"attribte {node}.{'.'.join(filtered_attributes)} not found")
+            raise RuntimeError(
+                f"attribte {node}.{'.'.join(filtered_attributes)} not found"
+            )
         attr_type = attr.type_
         if attr_type not in self._type_mapping:
             raise TypeError(f"Unsupported type {attr_type} for expression")
