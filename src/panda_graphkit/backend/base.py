@@ -32,6 +32,13 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class NodeMap:
+    """Describe how a graph operation maps onto a backend node.
+
+    The mapping keeps the operation signature, backend node name, and the
+    attribute names used for input and output ports so graph connections can be
+    materialized correctly on a specific backend.
+    """
+
     operation_name: str
     signature: Signature
     mapped_node_type: str
@@ -97,6 +104,12 @@ class NodeMap:
 
 @dataclass(frozen=True)
 class OperationMap:
+    """Group the backend node mappings for one graph operation.
+
+    Each operation may have several valid backend node variants depending on the
+    signature being used in the graph.
+    """
+
     operation: Operation
     node_maps: tuple[NodeMap]
 

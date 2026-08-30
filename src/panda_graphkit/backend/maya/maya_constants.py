@@ -118,7 +118,7 @@ SUM = OperationMap(
         ),
         NodeMap(
             operation_name=ops_math.SUM.name,
-            signature=sig_math.VV_O_V_SIG,
+            signature=sig_math.NUVV_O_V_SIG,
             mapped_node_type="plusMinusAverage",
             input_attributes=("input3D",),
             output_attributes=("output3D",),
@@ -217,9 +217,9 @@ MULTIPLY = OperationMap(
         NodeMap(
             operation_name=ops_math.MULTIPLY.name,
             signature=sig_math.M_V_O_V_SIG,
-            mapped_node_type="multMatrix",
-            input_attributes=("matrixIn[1]", "matrixIn[0]"),
-            output_attributes=("matrixSum",),
+            mapped_node_type="pointMatrixMult",
+            input_attributes=("inMatrix", "inPoint"),
+            output_attributes=("output",),
         ),
     ],
 )

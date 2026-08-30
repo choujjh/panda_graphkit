@@ -56,7 +56,9 @@ class MockBackend(Backend):
         )
 
     def _create_nodes(self, graph):
+        """Create backend nodes for a graph in the mock implementation."""
         pass
 
     def _create_connections(self, graph, node_dict):
+        """Connect mock graph nodes without any real backend dependency."""
         pass

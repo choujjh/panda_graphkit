@@ -26,8 +26,13 @@ def build_expression(
     """
     tokens = tokenizer.Tokenizer(expression).tokenize()
     program = parser.Parser(tokens).parse()
+    # from . import ast
+    # ast.print_ast(program)
+
     analyzer_ = analyzer.Analyzer(backend=backend)
     analyzer_.analyze(program)
+    # ast.print_ast(program)
+    # exit()
     compiler_ = compiler.Compiler(backend)
     compiler_.compile(program, prefix, name)
 

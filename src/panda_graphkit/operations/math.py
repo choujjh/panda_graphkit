@@ -26,17 +26,17 @@ __all__ = (
 
 SIN = Operation(
     name="sin",
-    signatures=(sig_math.N_O_F_SIG,),
+    signatures=sig_math.N_O_F_SIG,
 )
 
 COS = Operation(
     name="cos",
-    signatures=(sig_math.N_O_F_SIG,),
+    signatures=sig_math.N_O_F_SIG,
 )
 
 REMAP = Operation(
     name="remap",
-    signatures=(sig_math.N5_O_N_SIG,),
+    signatures=sig_math.N5_O_N_SIG,
 )
 
 ADD = Operation(
@@ -53,7 +53,7 @@ SUM = Operation(
     name="sum",
     signatures=(
         sig_math.NV_O_N_SIG,
-        sig_math.VV_O_V_SIG,
+        sig_math.NUVV_O_V_SIG,
         sig_math.MV_O_M_SIG,
     ),
 )
@@ -84,7 +84,7 @@ PRODUCT = Operation(
     name="product",
     signatures=(
         sig_math.NV_O_N_SIG,
-        sig_math.VV_O_V_SIG,
+        sig_math.NUVV_O_V_SIG,
         sig_math.M_V_O_V_SIG,
     ),
 )
@@ -119,5 +119,5 @@ VECTOR = Operation(
 
 MATRIX = Operation(
     name="matrix",
-    signatures=(sig_math.N16_O_M,),
+    signatures=sig_math.N16_O_M,
 )

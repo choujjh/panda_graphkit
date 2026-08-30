@@ -17,6 +17,7 @@ from .attribute_types import (
     MATRIX4,
     STRING,
     infer_return_type,
+    types_is_compatable,
 )
 from .graph import (
     Graph,
@@ -46,6 +47,7 @@ __all__ = [
     "MATRIX4",
     "STRING",
     "infer_return_type",
+    "types_is_compatable",
     "Graph",
     "Port",
     "InputPort",

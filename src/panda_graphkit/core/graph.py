@@ -1,5 +1,6 @@
 """Directed graph primitives for computation nodes, ports, and connections."""
 
+from ..core import types_is_compatable
 from . import attribute_types
 from . import operation
 from typing import Callable, Union
@@ -71,35 +72,40 @@ class Graph:
         return [x for x in input_ports.node]
 
     def get_upstream_node(
-        self, node: "Node", predicate: Callable, same_type: bool = True
+        self, node: "Node", predicate: Callable, override_op:operation.Operation
     ):
         """Walk upstream while nodes satisfy a predicate and type constraints."""
-        current = node
+        current_node = node
+
         node_type = node.output_types
         if len(node_type) != 1:
-            return current
+            return current_node
         node_type = node_type[0]
+        replace_out_type, replace_sig = operation.match_signature(override_op, [x.types_ for x in node.get_signature().inputs])
+        if any(x is None for x in [replace_out_type, replace_sig]):
+            return node
+        check_sig_op = operation.Operation("check_sig", signatures=replace_sig)
         while True:
-            output_nodes = self.output_nodes(current)
+            output_nodes = self.output_nodes(current_node)
             if len(output_nodes) != 1:
                 break
             output_node = output_nodes[0]
             output_types = output_node.output_types
-            if same_type:
-                if not len(output_types) == 1 and node_type.is_compatable(
-                    output_types[0]
-                ):
-                    break
-                if any(
-                    not node_type.is_compatable(input_port.type_)
-                    for input_port in output_node.inputs.values()
-                ):
-                    break
+            if not len(output_types) == 1 and node_type.is_compatable(
+                output_types[0]
+            ):
+                break
             if not predicate(output_node):
                 break
-            current = output_nodes[0]
+            # if different signatures
+            current_node_sig = current_node.get_signature()
+            _, sig = operation.match_signature(check_sig_op, [x.types_ for x in current_node_sig.inputs])
+            if sig is None:
+                break
 
-        return current
+            current_node = output_nodes[0]
+
+        return current_node
 
     def get_next_numeric_name(self, name):
         """Return the next unique numbered name for a base name."""
@@ -406,13 +412,13 @@ class Node:
         if self.operation is None:
             return None
         _, ret_sig = operation.check_signature(
-            self.operation, [x.type_ for x in sig.inputs]
+            self.operation, [x.types_ for x in sig.inputs]
         )
         output_ports = list(self.outputs.values())
         if len(ret_sig.outputs) != len(output_ports):
             return None
         for parm, port in zip(ret_sig.outputs, output_ports):
-            if not parm.type_.is_compatable(port.type_):
+            if not types_is_compatable(parm.types_, port.type_):
                 return None
         return ret_sig
 
@@ -430,7 +436,7 @@ class Node:
             operation.Parameter(f"value{index}", input.type_)
             for index, input in enumerate(self.inputs.values())
         )
-        outputs = tuple(output.type_ for output in self.outputs.values())
+        outputs = tuple(operation.Parameter(f"output{index}", output.type_) for index, output in enumerate(self.outputs.values()))
 
         return operation.Signature(inputs=inputs, outputs=outputs)
 
@@ -498,7 +504,7 @@ class Connection:
     def __init__(self, source: OutputPort, destination: InputPort):
         """Create and register a typed connection between two ports."""
         # Type compatibility check
-        if not source.type_.is_compatable(destination.type_):
+        if not types_is_compatable(source.type_, destination.type_):
             raise TypeError(
                 f"Cannot connect {source.type_} (from {source.name}) "
                 f"to {destination.type_} (to {destination.name})"

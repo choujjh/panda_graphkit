@@ -1,7 +1,17 @@
 """Compile analyzed expression ASTs into optimized computation graphs."""
 
 from . import ast
-from ..core import Graph, Node, ConstNode, BackendNode, Port, OutputPort, Operation, AttributeType, infer_return_type
+from ..core import (
+    Graph,
+    Node,
+    ConstNode,
+    BackendNode,
+    Port,
+    OutputPort,
+    Operation,
+    AttributeType,
+    infer_return_type,
+)
 from ..backend import base
 from ..backend.base import BackendNodeOptimization
 from ..operations import math as ops_math
@@ -165,7 +175,7 @@ class Compiler:
 
         for node in list(self.graph.get_nodes()):
             top_node = self.graph.get_upstream_node(
-                node, lambda x: x.operation in replaced_ops
+                node, lambda x: x.operation in replaced_ops, merge_op
             )
             if (
                 node in deleted_nodes
@@ -272,9 +282,7 @@ class Compiler:
                 if x.connection is not None
             ]
             input_connections = [
-                x
-                for x in input_connections
-                if isinstance(x.source.node, ConstNode)
+                x for x in input_connections if isinstance(x.source.node, ConstNode)
             ]
 
             if len(input_connections) <= 1:
@@ -307,10 +315,7 @@ class Compiler:
                 deleted_nodes.append(connection.source.node)
                 self.graph.disconnect(connection)
                 self.graph.delete_port(connection.destination)
-                if (
-                    len(list(self.graph.output_dest_ports(connection.source.node)))
-                    == 0
-                ):
+                if len(list(self.graph.output_dest_ports(connection.source.node))) == 0:
                     self.graph.delete_node(connection.source.node)
 
             new_const = self.graph.add_node(

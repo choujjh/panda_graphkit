@@ -7,6 +7,7 @@ types in `Signature` and validation logic.
 
 from __future__ import annotations
 from dataclasses import dataclass
+from collections.abc import Iterable
 
 
 @dataclass(frozen=True)
@@ -36,6 +37,9 @@ class AttributeType:
 
     def is_compatable(self, other):
         """Return whether both types belong to the same root type family."""
+        if isinstance(other, Iterable):
+            return any(self.is_compatable(x) for x in other)
+
         if not isinstance(other, AttributeType) or other is None:
             return False
 
@@ -82,6 +86,22 @@ def infer_return_type(type_list: list[AttributeType]) -> AttributeType:
         return INT
     return NUMBER
 
+def types_is_compatable(types_a:tuple[AttributeType], types_b:tuple[AttributeType]):
+    """Return whether a type or tuple of types is compatible with another type set.
+
+    Args:
+        types_a: Candidate type or tuple of types to compare.
+        types_b: Type or tuple of types to check compatibility against.
+
+    Returns:
+        True when any candidate type is compatible with the target set.
+    """
+    if not isinstance(types_a, Iterable):
+        types_a = [types_a]
+    for type_a in types_a:
+        if type_a.is_compatable(types_b):
+            return True
+    return False
 
 # Common built-in types
 NUMBER = AttributeType("Number")
@@ -106,4 +126,5 @@ __all__ = [
     "MATRIX4",
     "STRING",
     "infer_return_type",
+    "types_is_compatable",
 ]

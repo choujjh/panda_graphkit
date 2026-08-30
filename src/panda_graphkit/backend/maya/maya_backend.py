@@ -11,6 +11,7 @@ from ...core import (
     BackendNode,
 )
 from ..base import Backend, OperationMap, NodeMap
+
 from ...maya import (
     create_node,
     wrap_node,
@@ -19,6 +20,7 @@ from ...maya import (
     Node as MNode,
     Attr as MAttr,
 )
+from ...expression.ast import Identifier, Literal
 from . import maya_constants
 
 
@@ -41,22 +43,46 @@ class MayaBackend(Backend):
     }
 
     def resolve_attribute_type(self, node, attributes):
+        """Resolve the attribute type for a Maya node attribute chain.
+
+        Args:
+            node: Node object whose attribute is being inspected.
+            attributes: Sequence of attribute identifiers along the access path.
+
+        Returns:
+            The matching `AttributeType` for the final attribute.
+        """
         node = node.name
-        attributes = [attr.name for attr in attributes]
+        filtered_attributes = []
+
+        for attribute in attributes:
+            if hasattr(attribute, "name"):
+                filtered_attributes.append(attribute.name)
+            if hasattr(attribute, "value"):
+                filtered_attributes.append(attribute.value)
+
         if not exists(node):
             raise RuntimeError(f"Node {node} does not exist")
         attr = wrap_node(node)
         try:
-            for attribute in attributes:
+            for attribute in filtered_attributes:
                 attr = attr[attribute]
         except KeyError as e:
-            raise RuntimeError(f"attribte {node}.{'.'.join(attributes)} not found")
+            raise RuntimeError(f"attribte {node}.{'.'.join(filtered_attributes)} not found")
         attr_type = attr.type_
         if attr_type not in self._type_mapping:
             raise TypeError(f"Unsupported type {attr_type} for expression")
         return self._type_mapping[attr_type]
 
     def _create_nodes(self, graph):
+        """Create Maya nodes for each backend-capable graph node.
+
+        Args:
+            graph: Graph to materialize into Maya dependencies.
+
+        Returns:
+            Mapping of node names to the created Maya node and its node map.
+        """
         node_dict = {}
         for node in graph.get_nodes():
             if isinstance(node, ConstNode):
@@ -83,6 +109,7 @@ class MayaBackend(Backend):
         return node_dict
 
     def _create_connections(self, graph, node_dict):
+        """Connect the generated Maya nodes according to the graph topology."""
         for connection in graph.connections.values():
             attr_list = []
             for port in [connection.source, connection.destination]:
@@ -94,8 +121,11 @@ class MayaBackend(Backend):
                 attr_list.append(self._get_attr(port, maya_node, node_map))
             source_attr = attr_list[0]
             dest_attr = attr_list[1]
-            
-            if not isinstance(source_attr, MAttr) or source_attr.type_ == dest_attr.type_:
+
+            if (
+                not isinstance(source_attr, MAttr)
+                or source_attr.type_ == dest_attr.type_
+            ):
                 dest_attr.set_connect(source_attr)
 
             elif source_attr.has_children() and dest_attr.has_children():

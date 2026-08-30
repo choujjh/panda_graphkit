@@ -13,6 +13,7 @@ from ..core import Signature, Parameter, NUMBER, FLOAT, VECTOR, MATRIX4
 # MATRIX Variadict -> MV
 # *number* denotes repeat ie. 16 -> repeated 16 times
 # OUTPUT -> O
+# OR/UNION -> U
 
 __all__ = [
     "N_O_F_SIG",
@@ -33,7 +34,7 @@ __all__ = [
 
 
 N_O_F_SIG = Signature(
-    inputs=(Parameter("value", NUMBER),), outputs=(Parameter("output", FLOAT),)
+    inputs=Parameter("value", NUMBER), outputs=Parameter("output", FLOAT)
 )
 
 N5_O_N_SIG = Signature(
@@ -44,7 +45,7 @@ N5_O_N_SIG = Signature(
         Parameter("output_max", NUMBER),
         Parameter("value", NUMBER),
     ),
-    outputs=(Parameter("output", NUMBER),),
+    outputs=Parameter("output", NUMBER),
 )
 
 N_N_O_N_SIG = Signature(
@@ -52,54 +53,58 @@ N_N_O_N_SIG = Signature(
         Parameter("value1", NUMBER),
         Parameter("value2", NUMBER),
     ),
-    outputs=(Parameter("output", NUMBER),),
+    outputs=Parameter("output", NUMBER),
 )
 V_V_O_V_SIG = Signature(
     inputs=(
         Parameter("value", VECTOR),
         Parameter("value", VECTOR),
     ),
-    outputs=(Parameter("output", VECTOR),),
+    outputs=Parameter("output", VECTOR),
 )
 N_V_O_V_SIG = Signature(
     inputs=(
         Parameter("value1", NUMBER),
         Parameter("value2", VECTOR),
     ),
-    outputs=(Parameter("output", VECTOR),),
+    outputs=Parameter("output", VECTOR),
 )
 V_N_O_V_SIG = Signature(
     inputs=(
         Parameter("value1", VECTOR),
         Parameter("value2", NUMBER),
     ),
-    outputs=(Parameter("output", VECTOR),),
+    outputs=Parameter("output", VECTOR),
 )
 NV_O_N_SIG = Signature(
-    inputs=(Parameter("value", NUMBER, variadict=True, min_count=2),),
-    outputs=(Parameter("output", NUMBER),),
+    inputs=Parameter("value", NUMBER, variadict=True, min_count=2),
+    outputs=Parameter("output", NUMBER),
 )
 VV_O_V_SIG = Signature(
-    inputs=(Parameter("value", VECTOR, variadict=True, min_count=2),),
-    outputs=(Parameter("output", VECTOR),),
+    inputs=Parameter("value", VECTOR, variadict=True, min_count=2),
+    outputs=Parameter("output", VECTOR),
+)
+NUVV_O_V_SIG = Signature(
+    inputs=Parameter("value", (NUMBER, VECTOR), variadict=True, min_count=2),
+    outputs=Parameter("output", VECTOR),
 )
 MV_O_M_SIG = Signature(
-    inputs=(Parameter("value", MATRIX4, variadict=True, min_count=2),),
-    outputs=(Parameter("output", MATRIX4),),
+    inputs=Parameter("value", MATRIX4, variadict=True, min_count=2),
+    outputs=Parameter("output", MATRIX4),
 )
 M_M_O_M_SIG = Signature(
     inputs=(
         Parameter("value1", MATRIX4),
         Parameter("value2", MATRIX4),
     ),
-    outputs=(Parameter("output", MATRIX4),),
+    outputs=Parameter("output", MATRIX4),
 )
 M_V_O_V_SIG = Signature(
     inputs=(
         Parameter("value1", MATRIX4),
         Parameter("value2", VECTOR),
     ),
-    outputs=(Parameter("output", VECTOR),),
+    outputs=Parameter("output", VECTOR),
 )
 N4_O_V = Signature(
     inputs=(
@@ -108,14 +113,14 @@ N4_O_V = Signature(
         Parameter("z", NUMBER),
         Parameter("w", NUMBER),
     ),
-    outputs=(Parameter("output", VECTOR),),
+    outputs=Parameter("output", VECTOR),
 )
 N_N_O_V = Signature(
     inputs=(
         Parameter("x", NUMBER),
         Parameter("y", NUMBER),
     ),
-    outputs=(Parameter("output", VECTOR),),
+    outputs=Parameter("output", VECTOR),
 )
 N_N_N_O_V = Signature(
     inputs=(
@@ -123,7 +128,7 @@ N_N_N_O_V = Signature(
         Parameter("y", NUMBER),
         Parameter("z", NUMBER),
     ),
-    outputs=(Parameter("output", VECTOR),),
+    outputs=Parameter("output", VECTOR),
 )
 N16_O_M = Signature(
     inputs=(
@@ -144,5 +149,5 @@ N16_O_M = Signature(
         Parameter("cell32", NUMBER),
         Parameter("cell33", NUMBER),
     ),
-    outputs=(Parameter("output", MATRIX4),),
+    outputs=Parameter("output", MATRIX4),
 )

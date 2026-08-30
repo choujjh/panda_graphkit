@@ -1658,7 +1658,7 @@ class Attr:
 
     def set_connect(self, attr_data, set_when_data_is_attr: bool = False):
         """Connect to attribute if it can, but sets data otherwise
-        
+
         Args:
             attr_name (str):
             data (Any):
