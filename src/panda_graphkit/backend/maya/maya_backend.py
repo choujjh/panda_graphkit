@@ -1,5 +1,6 @@
 """Maya backend for materializing GraphKit operations and connections."""
 
+from collections.abc import Iterable
 from ...core import (
     FLOAT,
     MATRIX4,
@@ -112,24 +113,55 @@ class MayaBackend(Backend):
     def _create_connections(self, graph, node_dict):
         """Connect the generated Maya nodes according to the graph topology."""
         for connection in graph.connections.values():
+            # Getting source and attribute
             attr_list = []
-            for port in [connection.source, connection.destination]:
+            skip_connection = False
+            for port_index, port in enumerate([connection.source, connection.destination]):
                 port_map = maya_node = node_map = None
+                # If node mapping does exist
                 if port.node.name in node_dict:
                     port_map = node_dict[port.node.name]
                     maya_node = port_map["node"]
                     node_map = port_map["map"]
+                # If no node mapping exists
+                elif not isinstance(port.node, (BackendNode, ConstNode)):
+                    if port_index == 1:
+                        skip_connection = True
+                        continue
+                    else:
+                        source_attr_list = []
+                        for src_port in graph.input_src_ports(port.node):
+                            if src_port.node.name in node_dict:
+                                port_map = node_dict[src_port.node.name]
+                                maya_node = port_map["node"]
+                                node_map = port_map["map"]
+                            source_attr_list.append(self._get_attr(src_port, maya_node, node_map))
+                        attr_list.append(source_attr_list)
+                        continue
                 attr_list.append(self._get_attr(port, maya_node, node_map))
+                        
+            if skip_connection:
+                continue
             source_attr = attr_list[0]
             dest_attr = attr_list[1]
 
-            if (
+            # Connectin source and attribute
+            if not isinstance(source_attr, MAttr) and isinstance(source_attr, list):
+                src_dict = nested_to_dict(source_attr)
+                for key, value in src_dict.items():
+                    dest_chld_attr = dest_attr
+                    for index in key:
+                        dest_chld_attr = dest_chld_attr[index]
+
+                    dest_chld_attr.set_connect(value)
+
+            elif (
                 not isinstance(source_attr, MAttr)
                 or source_attr.type_ == dest_attr.type_
             ):
                 dest_attr.set_connect(source_attr)
 
-            elif source_attr.has_children() and dest_attr.has_children():
+            elif source_attr.has_children() and (dest_attr.has_children()):
                 source_len = len(source_attr)
                 dest_len = len(dest_attr)
                 if source_len == dest_len:
@@ -150,9 +182,9 @@ class MayaBackend(Backend):
         """Gets attribute from mapped maya node
 
         Args:
-            port (Port): _description_
-            maya_node (MNode): _description_
-            node_map (NodeMap): _description_
+            port (Port):
+            maya_node (MNode):
+            node_map (NodeMap):
 
         Returns:
             MAttr:
@@ -169,3 +201,17 @@ class MayaBackend(Backend):
         for attr in attrs:
             curr_attr = curr_attr[attr]
         return curr_attr
+
+def nested_to_dict(data, indexes=(), depth=0, max_depth=300):
+    result = {}
+    if depth >= max_depth:
+        return {}
+    for i, value in enumerate(data):
+        current_index = indexes + (i, )
+
+        if isinstance(value, list):
+            result.update(nested_to_dict(value, current_index, depth+1))
+        else:
+            result[current_index] = value
+
+    return result

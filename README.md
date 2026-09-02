@@ -48,15 +48,6 @@ Expression
     └── Unreal
 ```
 
-## Known Issues
-
-Panda GraphKit is currently under active development. The following are known
-limitations and areas that are still being worked on.
-
-- The API is experimental and may change.
-- The analyzer and type system are still under development.
-- Number to Vector conversion signatures currently don't work ie 4 * Vector(x, y, z)
-
 ## Maya Installation
 
 Panda GraphKit is a standard Python package. Maya does not require a separate

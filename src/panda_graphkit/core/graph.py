@@ -458,7 +458,15 @@ class Node:
 
         return name
 
-    def get_port_len(self, use_input_ports=True):
+    def get_port_len(self, use_input_ports=True) -> int:
+        """gets port length. specify if it's input or output ports
+
+        Args:
+            use_input_ports (bool, optional):
+
+        Returns:
+            int: 
+        """
         if use_input_ports:
             return len(self.inputs.keys())
         return len(self.outputs.keys())
