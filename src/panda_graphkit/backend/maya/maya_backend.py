@@ -11,7 +11,9 @@ from ...core import (
     ConstNode,
     BackendNode,
 )
-from ..base import Backend, OperationMap, NodeMap
+from ...operations import math as ops_math
+from ...signatures import math as sig_math
+from ..base import Backend, NodeMap, OperationMap, BackendNodeOptimization
 
 from ...maya import (
     create_node,
@@ -41,6 +43,21 @@ class MayaBackend(Backend):
         for x in maya_constants.__all__
         if isinstance(getattr(maya_constants, x), OperationMap)
     }
+    optimize_operations = [
+        BackendNodeOptimization(
+            checked_ops=[ops_math.ADD, ops_math.SUM],
+            operand=ops_math.SUM,
+            identity_value=0,
+        ),
+        BackendNodeOptimization(
+            checked_ops=[ops_math.MULTIPLY, ops_math.PRODUCT],
+            operand=ops_math.PRODUCT.without_signatures(sig_math.NUVV_O_V_SIG),
+            identity_value=1,
+        ),
+    ]
+    def __init__(self):
+        super().__init__()
+        self.supported_operations_map[ops_math.PRODUCT.name] = ops_math.PRODUCT.without_signatures(sig_math.NUVV_O_V_SIG)
 
     def resolve_attribute_type(self, node, attributes):
         """Resolve the attribute type for a Maya node attribute chain.

@@ -162,14 +162,14 @@ class Compiler:
             ) in self.backend.resolve_backend_node_optimization():
                 changed |= self._flatten_operation(backend_node_optimize, prefix, name)
 
-                changed |= self._simplify_operation(backend_node_optimize)
+                changed |= self._simplify_operation(backend_node_optimize, prefix, name)
 
             changed |= self._eliminate_identity_operations()
 
             changed |= self._combine_constants()
 
     def _simplify_operation(
-        self, backend_node_optimize: BackendNodeOptimization,
+        self, backend_node_optimize: BackendNodeOptimization, prefix:str, name:str
     ) -> bool:
         """Converts back to simpler functions ie sum -> add if applicable
 
@@ -181,6 +181,9 @@ class Compiler:
         """
         changed = False
 
+        nice_name = f"{name}_" if name != "" else ""
+        full_prefix = f"{prefix}_{nice_name}"
+
         simple_op = [x for x in backend_node_optimize.checked_ops if x != backend_node_optimize.operand]
         if not simple_op:
             return changed
@@ -191,8 +194,13 @@ class Compiler:
             _, signature = match_signature(simple_op, node.get_signature())
             if signature is not None:
                 changed = True
+                key = node.name
+                self.graph.nodes.pop(key)
+                node.name = self.graph.get_next_numeric_name(f"{full_prefix}{simple_op.name}")
                 node.operation_signature = signature
                 node.operation = simple_op
+                self.graph.nodes[node.name] = node
+                
 
         return changed
 

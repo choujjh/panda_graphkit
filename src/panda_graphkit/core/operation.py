@@ -184,6 +184,32 @@ class Operation:
                 curr_var = [curr_var]
             object.__setattr__(self, "signatures", tuple(curr_var))
 
+    def replace(self, name:str=None, signatures: tuple[Signature]=None) -> Operation:
+        """Replaces fields and returns a new Operation
+
+        Args:
+            name (str, optional): Defaults to None.
+            signatures (tuple[Signature], optional): Defaults to None.
+
+        Returns:
+            Operation:
+        """
+        if name is None:
+            name = self.name
+        if signatures is None:
+            signatures = self.signatures
+        return Operation(name, signatures)
+
+    def without_signatures(self, *signatures) -> Operation:
+        """Create Operation without certain signatures
+
+        Returns:
+            Operation:
+        """
+        new_signatures = [sig for sig in  self.signatures if sig not in signatures]
+        return self.replace(signatures=new_signatures)
+
+
 
 def check_signature(
     operation: Operation,
