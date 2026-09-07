@@ -39,11 +39,11 @@ N_O_F_SIG = Signature(
 
 N5_O_N_SIG = Signature(
     inputs=(
-        Parameter("input_min", NUMBER),
-        Parameter("input_max", NUMBER),
-        Parameter("output_min", NUMBER),
-        Parameter("output_max", NUMBER),
-        Parameter("value", NUMBER),
+        Parameter("value1", NUMBER),
+        Parameter("value2", NUMBER),
+        Parameter("value3", NUMBER),
+        Parameter("value4", NUMBER),
+        Parameter("value5", NUMBER),
     ),
     outputs=Parameter("output", NUMBER),
 )
@@ -57,8 +57,8 @@ N_N_O_N_SIG = Signature(
 )
 V_V_O_V_SIG = Signature(
     inputs=(
-        Parameter("value", VECTOR),
-        Parameter("value", VECTOR),
+        Parameter("value1", VECTOR),
+        Parameter("value2", VECTOR),
     ),
     outputs=Parameter("output", VECTOR),
 )

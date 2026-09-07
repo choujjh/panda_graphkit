@@ -137,10 +137,13 @@ class Analyzer:
 
         operation_ = self.backend.resolve_operation(node.operation)
 
-        signature_check, _ = check_signature(operation_, [left_type, right_type])
+        signature_check, signature = check_signature(
+            operation_, [left_type, right_type]
+        )
         if signature_check is not None:
             node.type_ = signature_check
             node.operation_ = operation_
+            node.signature = signature
 
         return node.type_
 
@@ -170,12 +173,13 @@ class Analyzer:
                 f"Unsupported function type: {type(node.function).__name__}"
             )
 
-        signature_check, _ = check_signature(
+        signature_check, signature = check_signature(
             operation_, [arg.type_ for arg in node.arguments]
         )
         if signature_check is not None:
             node.type_ = signature_check
             node.operation_ = operation_
+            node.signature = signature
 
         return node.type_
 

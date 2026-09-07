@@ -32,7 +32,7 @@ from .graph import (
     Connection,
 )
 from .math import Vector as MathVector, Matrix as MathMatrix
-from .operation import Operation, Signature, Parameter, check_signature
+from .operation import Operation, Signature, Parameter, check_signature, match_signature
 
 
 __all__ = [
@@ -64,4 +64,5 @@ __all__ = [
     "Signature",
     "Parameter",
     "check_signature",
+    "match_signature",
 ]

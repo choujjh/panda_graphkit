@@ -17,7 +17,7 @@ class Graph:
         self._node_name_counters = {}  # Track count per operation name
 
     def add_node(
-        self, name: str = None, operation_=None, node: "Node" = None
+        self, name: str = None, operation_=None, signature=None, node: "Node" = None
     ) -> "Node":
         """Add a node or operation node and return the stored node."""
         # Return node if already in graph
@@ -36,7 +36,7 @@ class Graph:
             # Increment counter for this name
             name = self.get_next_numeric_name(name)
 
-            node = Node(name, operation_)
+            node = Node(name, operation_, signature)
             self.nodes[name] = node
             return node
 
@@ -81,7 +81,7 @@ class Graph:
             return current_node
         node_type = node_type[0]
         replace_out_type, replace_sig = operation.match_signature(
-            override_op, [x.types_ for x in node.get_signature().inputs]
+            override_op, node.get_signature()
         )
         if any(x is None for x in [replace_out_type, replace_sig]):
             return node
@@ -97,9 +97,8 @@ class Graph:
             if not predicate(output_node):
                 break
             # if different signatures
-            current_node_sig = current_node.get_signature()
             _, sig = operation.match_signature(
-                check_sig_op, [x.types_ for x in current_node_sig.inputs]
+                check_sig_op, current_node.get_signature()
             )
             if sig is None:
                 break
@@ -261,10 +260,10 @@ class Port:
             The port index, or ``None`` if this port is not registered on its
             node.
         """
-        port_list = [self.node.inputs[port] for port in sorted(self.node.inputs.keys())]
+        port_list = [self.node.inputs[port] for port in self.node.inputs.keys()]
         if isinstance(self, OutputPort):
             port_list = [
-                self.node.outputs[port] for port in sorted(self.node.outputs.keys())
+                self.node.outputs[port] for port in self.node.outputs.keys()
             ]
 
         if self in port_list:
@@ -334,12 +333,18 @@ class Node:
     _input_port_type = InputPort
     _output_port_type = OutputPort
 
-    def __init__(self, name: str, operation: operation.Operation):
+    def __init__(
+        self,
+        name: str,
+        operation: operation.Operation,
+        operation_signature: operation.Signature = None,
+    ):
         """Create a node with a unique id and no ports."""
         self.id = Node._id_counter
         Node._id_counter += 1
         self.name = name
         self.operation = operation
+        self.operation_signature = operation_signature
         self.inputs = {}
         self.outputs = {}
         self._port_counters = {}
@@ -465,7 +470,7 @@ class Node:
             use_input_ports (bool, optional):
 
         Returns:
-            int: 
+            int:
         """
         if use_input_ports:
             return len(self.inputs.keys())

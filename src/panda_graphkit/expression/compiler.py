@@ -11,6 +11,7 @@ from ..core import (
     Operation,
     AttributeType,
     infer_return_type,
+    match_signature,
 )
 from ..backend import base
 from ..backend.base import BackendNodeOptimization
@@ -63,7 +64,9 @@ class Compiler:
             right_port = self.ast_to_graph(ast_node.right, prefix, name)
 
             node = self.graph.add_node(
-                f"{full_prefix}{ast_node.operation_.name}", ast_node.operation_
+                f"{full_prefix}{ast_node.operation_.name}",
+                ast_node.operation_,
+                ast_node.signature,
             )
 
             # add ports
@@ -78,7 +81,9 @@ class Compiler:
 
         if isinstance(ast_node, ast.FunctionCall):
             node = self.graph.add_node(
-                f"{full_prefix}{ast_node.function.name}", ast_node.operation_
+                f"{full_prefix}{ast_node.function.name}",
+                ast_node.operation_,
+                ast_node.signature,
             )
 
             for attribute in ast_node.arguments:
@@ -157,9 +162,40 @@ class Compiler:
             ) in self.backend.resolve_backend_node_optimization():
                 changed |= self._flatten_operation(backend_node_optimize, prefix, name)
 
-                changed |= self._eliminate_identity_operations()
+                changed |= self._simplify_operation(backend_node_optimize)
+
+            changed |= self._eliminate_identity_operations()
 
             changed |= self._combine_constants()
+
+    def _simplify_operation(
+        self, backend_node_optimize: BackendNodeOptimization,
+    ) -> bool:
+        """Converts back to simpler functions ie sum -> add if applicable
+
+        Args:
+            backend_node_optimize (BackendNodeOptimization):
+
+        Returns:
+            bool:
+        """
+        changed = False
+
+        simple_op = [x for x in backend_node_optimize.checked_ops if x != backend_node_optimize.operand]
+        if not simple_op:
+            return changed
+        simple_op = simple_op[0]
+        for node in self.graph.get_nodes():
+            if node.operation != backend_node_optimize.operand:
+                continue
+            _, signature = match_signature(simple_op, node.get_signature())
+            if signature is not None:
+                changed = True
+                node.operation_signature = signature
+                node.operation = simple_op
+
+        return changed
+
 
     def _flatten_operation(
         self, backend_node_optimize: BackendNodeOptimization, prefix: str, name: str
@@ -176,6 +212,7 @@ class Compiler:
             top_node = self.graph.get_upstream_node(
                 node, lambda x: x.operation in replaced_ops, merge_op
             )
+            _, sig = match_signature(merge_op, top_node.get_signature())
             if (
                 node in deleted_nodes
                 or node.operation not in replaced_ops
@@ -194,7 +231,7 @@ class Compiler:
                 self.graph.delete_node(curr_node)
 
             added_node = self.graph.add_node(
-                name=f"{full_prefix}{merge_op.name}", operation_=merge_op
+                name=f"{full_prefix}{merge_op.name}", operation_=merge_op, signature=sig
             )
             for output_port in output_ports:
                 added_input = added_node.add_input(output_port.type_)
@@ -275,34 +312,82 @@ class Compiler:
         for node in list(self.graph.get_nodes()):
             if node in deleted_nodes:
                 continue
-            input_connections = [
-                x.connection
-                for x in list(node.inputs.values())
-                if x.connection is not None
-            ]
-            input_connections = [
-                x for x in input_connections if isinstance(x.source.node, ConstNode)
-            ]
 
-            if len(input_connections) <= 1:
+            # input connections
+            input_const_connections = []
+            # if its commutative
+            if (
+                node.operation_signature is not None
+                and node.operation_signature.commutative
+            ):
+                input_const_connections = [
+                    [
+                        input.connection
+                        for input in node.inputs.values()
+                        if input.connection is not None
+                        and isinstance(input.connection.source.node, ConstNode)
+                    ]
+                ]
+            # not commutative
+            else:
+                input_current_grp = []
+                for input in list(node.inputs.values()):
+                    if input.connection is not None and isinstance(
+                        input.connection.source.node, ConstNode
+                    ):
+                        input_current_grp.append(input.connection)
+                    elif input_current_grp:
+                        input_const_connections.append(input_current_grp)
+                        input_current_grp = []
+
+                if input_current_grp:
+                    input_const_connections.append(input_current_grp)
+
+            if len(input_const_connections) <= 0 or len(input_const_connections[0]) <=1:
                 continue
 
-            val = None
-            type_ = infer_return_type([x.source.type_ for x in input_connections])
-
-            constructor = self.backend.resolve_constructor(node.operation.name)
             # if it's a constructed data type
+            constructor = self.backend.resolve_constructor(node.operation.name)
             if constructor is not None:
-                if len(input_connections) not in constructor.num_elements:
+                if len(input_const_connections) not in constructor.num_elements:
                     continue
 
                 changed = True
-                val = [x.source.node.value for x in input_connections]
+                val = [x.source.node.value for x in input_const_connections]
                 val = constructor.math_class.from_values(*val)
 
                 type_ = constructor.attr_type
-            else:
-                for connection in input_connections:
+
+                for connection in input_const_connections:
+                    deleted_nodes.append(connection.source.node)
+                    self.graph.disconnect(connection)
+                    self.graph.delete_port(connection.destination)
+                    if len(list(self.graph.output_dest_ports(connection.source.node))) == 0:
+                        self.graph.delete_node(connection.source.node)
+
+                new_const = self.graph.add_node(
+                    node=ConstNode(
+                        self.graph.get_next_numeric_name(f"{type_.name}Const"),
+                        type_=type_,
+                        value=val,
+                    )
+                )
+                input_port = node.add_input(type_=type_)
+                self.graph.connect(new_const.output_port, input_port)
+                continue
+
+            for cluster in input_const_connections:
+                changed = True
+                first_connection = cluster[0]
+                first_const = cluster[0].source.node
+
+                if len(cluster) <= 1:
+                    continue
+
+                val = None
+                type_ = infer_return_type([x.source.type_ for x in cluster])
+
+                for connection in cluster:
                     if val is None:
                         val = connection.source.node.value
                     elif node.operation in (ops_math.ADD, ops_math.SUM):
@@ -310,23 +395,17 @@ class Compiler:
                     elif node.operation in (ops_math.MULTIPLY, ops_math.PRODUCT):
                         val = val * connection.source.node.value
 
-            for connection in input_connections:
-                deleted_nodes.append(connection.source.node)
-                self.graph.disconnect(connection)
-                self.graph.delete_port(connection.destination)
-                if len(list(self.graph.output_dest_ports(connection.source.node))) == 0:
-                    self.graph.delete_node(connection.source.node)
+                first_connection.destination.type_ = type_
+                first_connection.source.type_ = type_
+                first_const.value = val
 
-            new_const = self.graph.add_node(
-                node=ConstNode(
-                    self.graph.get_next_numeric_name(f"{type_.name}Const"),
-                    type_=type_,
-                    value=val,
-                )
-            )
-            input_port = node.add_input(type_=type_)
-            self.graph.connect(new_const.output_port, input_port)
+                for connection in cluster[1:]:
+                    deleted_nodes.append(connection.source.node)
+                    self.graph.disconnect(connection)
+                    self.graph.delete_port(connection.destination)
+                    if len(list(self.graph.output_dest_ports(connection.source.node))) == 0:
+                        self.graph.delete_node(connection.source.node)
 
-            self.graph.collapse_single_input_node(node)
+            changed |= self.graph.collapse_single_input_node(node)
 
         return changed

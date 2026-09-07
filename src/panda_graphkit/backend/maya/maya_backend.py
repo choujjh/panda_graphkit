@@ -116,7 +116,9 @@ class MayaBackend(Backend):
             # Getting source and attribute
             attr_list = []
             skip_connection = False
-            for port_index, port in enumerate([connection.source, connection.destination]):
+            for port_index, port in enumerate(
+                [connection.source, connection.destination]
+            ):
                 port_map = maya_node = node_map = None
                 # If node mapping does exist
                 if port.node.name in node_dict:
@@ -135,17 +137,20 @@ class MayaBackend(Backend):
                                 port_map = node_dict[src_port.node.name]
                                 maya_node = port_map["node"]
                                 node_map = port_map["map"]
-                            source_attr_list.append(self._get_attr(src_port, maya_node, node_map))
+                            source_attr_list.append(
+                                self._get_attr(src_port, maya_node, node_map)
+                            )
                         attr_list.append(source_attr_list)
                         continue
                 attr_list.append(self._get_attr(port, maya_node, node_map))
-                        
+
             if skip_connection:
                 continue
             source_attr = attr_list[0]
             dest_attr = attr_list[1]
 
             # Connectin source and attribute
+            # if source_attr returns a list
             if not isinstance(source_attr, MAttr) and isinstance(source_attr, list):
                 src_dict = nested_to_dict(source_attr)
                 for key, value in src_dict.items():
@@ -155,13 +160,16 @@ class MayaBackend(Backend):
 
                     dest_chld_attr.set_connect(value)
 
-            elif (
-                not isinstance(source_attr, MAttr)
-                or source_attr.type_ == dest_attr.type_
+            # if dest has children and source attr does not
+            elif dest_attr.has_children() and (
+                not isinstance(source_attr, Iterable)
+                or (isinstance(source_attr, MAttr) and not source_attr.has_children())
             ):
-                dest_attr.set_connect(source_attr)
+                for dest_chld_attr in dest_attr:
+                    dest_chld_attr.set_connect(source_attr)
 
-            elif source_attr.has_children() and (dest_attr.has_children()):
+            # if both have children
+            elif (isinstance(source_attr, MAttr) and source_attr.has_children()) and (dest_attr.has_children()):
                 source_len = len(source_attr)
                 dest_len = len(dest_attr)
                 if source_len == dest_len:
@@ -174,9 +182,8 @@ class MayaBackend(Backend):
                     for source_chld_attr, dest_chld_attr in zip(source_list, dest_list):
                         dest_chld_attr.set_connect(source_chld_attr)
 
-            elif dest_attr.has_children() and not source_attr.has_children():
-                for dest_chld_attr in dest_attr:
-                    dest_chld_attr.set_connect(source_attr)
+            else:
+                dest_attr.set_connect(source_attr)
 
     def _get_attr(self, port: Port, maya_node: MNode, node_map: NodeMap) -> MAttr:
         """Gets attribute from mapped maya node
@@ -202,15 +209,16 @@ class MayaBackend(Backend):
             curr_attr = curr_attr[attr]
         return curr_attr
 
+
 def nested_to_dict(data, indexes=(), depth=0, max_depth=300):
     result = {}
     if depth >= max_depth:
         return {}
     for i, value in enumerate(data):
-        current_index = indexes + (i, )
+        current_index = indexes + (i,)
 
         if isinstance(value, list):
-            result.update(nested_to_dict(value, current_index, depth+1))
+            result.update(nested_to_dict(value, current_index, depth + 1))
         else:
             result[current_index] = value
 

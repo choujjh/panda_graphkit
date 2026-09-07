@@ -7,7 +7,7 @@ development and debugging.
 """
 
 from dataclasses import dataclass
-from ..core import AttributeType
+from ..core import AttributeType, Operation, Signature
 
 
 @dataclass(kw_only=True)
@@ -19,7 +19,8 @@ class ASTNode:
     """
 
     type_: AttributeType | None = None
-    operation_: AttributeType | None = None
+    operation_: Operation | None = None
+    signature: Signature | None = None
 
 
 @dataclass

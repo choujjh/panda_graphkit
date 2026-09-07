@@ -36,25 +36,27 @@ COS = Operation(
 
 REMAP = Operation(
     name="remap",
-    signatures=sig_math.N5_O_N_SIG,
+    signatures=sig_math.N5_O_N_SIG.replace_names(
+        "input_min", "input_max", "output_min", "output_max", "value", "output"
+    ),
 )
 
 ADD = Operation(
     name="add",
     signatures=(
-        sig_math.N_N_O_N_SIG,
-        sig_math.V_V_O_V_SIG,
-        sig_math.N_V_O_V_SIG,
-        sig_math.V_N_O_V_SIG,
+        sig_math.N_N_O_N_SIG.replace(commutative=True),
+        sig_math.V_V_O_V_SIG.replace(commutative=True),
+        sig_math.N_V_O_V_SIG.replace(commutative=True),
+        sig_math.V_N_O_V_SIG.replace(commutative=True),
     ),
 )
 
 SUM = Operation(
     name="sum",
     signatures=(
-        sig_math.NV_O_N_SIG,
-        sig_math.NUVV_O_V_SIG,
-        sig_math.MV_O_M_SIG,
+        sig_math.NV_O_N_SIG.replace(commutative=True),
+        sig_math.NUVV_O_V_SIG.replace(commutative=True),
+        sig_math.MV_O_M_SIG.replace(commutative=True),
     ),
 )
 
@@ -71,11 +73,11 @@ SUBTRACT = Operation(
 MULTIPLY = Operation(
     name="mult",
     signatures=(
-        sig_math.N_N_O_N_SIG,
-        sig_math.V_V_O_V_SIG,
+        sig_math.N_N_O_N_SIG.replace(commutative=True),
+        sig_math.V_V_O_V_SIG.replace(commutative=True),
         sig_math.M_M_O_M_SIG,
-        sig_math.N_V_O_V_SIG,
-        sig_math.V_N_O_V_SIG,
+        sig_math.N_V_O_V_SIG.replace(commutative=True),
+        sig_math.V_N_O_V_SIG.replace(commutative=True),
         sig_math.M_V_O_V_SIG,
     ),
 )
@@ -83,10 +85,9 @@ MULTIPLY = Operation(
 PRODUCT = Operation(
     name="product",
     signatures=(
-        sig_math.NV_O_N_SIG,
+        sig_math.NV_O_N_SIG.replace(commutative=True),
         sig_math.MV_O_M_SIG,
-        sig_math.NUVV_O_V_SIG,
-        sig_math.M_V_O_V_SIG,
+        sig_math.NUVV_O_V_SIG.replace(commutative=True),
     ),
 )
 

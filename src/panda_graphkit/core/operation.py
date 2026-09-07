@@ -5,7 +5,8 @@ describe the allowed input shapes and types for the operation. These
 are lightweight dataclasses used by validation and dispatch logic.
 """
 
-from dataclasses import dataclass
+from __future__ import annotations
+from dataclasses import dataclass, field
 from collections.abc import Iterable
 from ..core import types_is_compatable
 from . import attribute_types
@@ -35,6 +36,34 @@ class Parameter:
                 curr_var = [curr_var]
             object.__setattr__(self, "types_", tuple(curr_var))
 
+    def replace(
+        self,
+        name: str = None,
+        types_: tuple[attribute_types.AttributeType] = None,
+        variadict: bool = None,
+        min_count: int = None,
+    ):
+        """Replaces fields for new copy of Parameter
+
+        Args:
+            name (str, optional): _description_. Defaults to None.
+            types_ (tuple[attribute_types.AttributeType], optional): _description_. Defaults to None.
+            variadict (bool, optional): _description_. Defaults to None.
+            min_count (int, optional): _description_. Defaults to None.
+
+        Returns:
+            _type_: _description_
+        """
+        if name is None:
+            name = self.name
+        if types_ is None:
+            types_ = self.types_
+        if variadict is None:
+            variadict = self.variadict
+        if min_count is None:
+            min_count = self.min_count
+        return Parameter(name, types_, variadict, min_count)
+
 
 @dataclass(frozen=True)
 class Signature:
@@ -42,11 +71,13 @@ class Signature:
 
     Attributes:
         inputs: Sequence of `Parameter` objects describing expected inputs.
-        output: Expected `GraphType` of the result.
+        output: Sequence of `Parameter` objects describing expected output.
+        commutative: if signature's orders matter
     """
 
     inputs: tuple[Parameter]
     outputs: tuple[Parameter]
+    commutative: bool = field(default=False, compare=False)
 
     def __repr__(self):
         """Return a readable representation of the signature shape."""
@@ -80,6 +111,54 @@ class Signature:
                 curr_var = [curr_var]
             object.__setattr__(self, "outputs", tuple(curr_var))
 
+    def replace(
+        self,
+        inputs: tuple[Parameter] = None,
+        outputs: tuple[Parameter] = None,
+        commutative: bool = None,
+    )->Signature:
+        """Replace Fields in Signature for copy of signature
+
+        Args:
+            inputs (tuple[Parameter], optional): Defaults to None.
+            outputs (tuple[Parameter], optional): Defaults to None.
+            commutative (bool, optional): Defaults to None.
+
+        Returns:
+            Signature:
+        """
+        if inputs is None:
+            inputs = self.inputs
+        if outputs is None:
+            outputs = self.outputs
+        if commutative is None:
+            commutative = self.commutative
+        return Signature(inputs, outputs, commutative)
+
+    def replace_names(self, *names) -> Signature:
+        """Replaces Parameter names
+
+        Raises:
+            ValueError:
+
+        Returns:
+            Signature:
+        """
+        if len(names) != len(self.inputs) + len(self.outputs):
+            raise ValueError(
+                f"Number of names ({len(names)}) does not match signature ({len(self.inputs) + len(self.outputs)})"
+            )
+        return Signature(
+            inputs=tuple(
+                parm.replace(name=name)
+                for parm, name in zip(self.inputs, names[: len(self.inputs)])
+            ),
+            outputs=tuple(
+                parm.replace(name=name)
+                for parm, name in zip(self.outputs, names[len(self.inputs) :])
+            ),
+        )
+
 
 @dataclass(frozen=True)
 class Operation:
@@ -108,7 +187,7 @@ class Operation:
 
 def check_signature(
     operation: Operation,
-    arg_types: list[attribute_types.AttributeType],
+    arg_types: list[attribute_types.AttributeType] | Signature,
 ) -> tuple[attribute_types.AttributeType, Signature]:
     """Check if argument types match a signature in the operation.
 
@@ -140,7 +219,7 @@ def check_signature(
 
 def match_signature(
     operation: Operation,
-    arg_types: list[attribute_types.AttributeType],
+    arg_types: list[attribute_types.AttributeType] | Signature,
 ) -> tuple[attribute_types.AttributeType, Signature]:
     """tries to find a matching signature. returns None otherwise
 
@@ -160,6 +239,8 @@ def match_signature(
     Raises:
         TypeError: If no matching signature is found.
     """
+    if isinstance(arg_types, Signature):
+        arg_types = [x.types_ for x in arg_types.inputs]
     for signature in operation.signatures:
         first_input = signature.inputs[0] if signature.inputs else None
         if (
@@ -168,7 +249,7 @@ def match_signature(
             and len(arg_types) >= first_input.min_count
         ):
             if all(
-                types_is_compatable(arg_type, first_input.types_)
+                types_is_compatable(first_input.types_, arg_type)
                 for arg_type in arg_types
             ):
                 if signature.outputs[0] in [attribute_types.NUMBER]:
