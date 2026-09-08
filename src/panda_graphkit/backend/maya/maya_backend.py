@@ -55,9 +55,12 @@ class MayaBackend(Backend):
             identity_value=1,
         ),
     ]
+
     def __init__(self):
         super().__init__()
-        self.supported_operations_map[ops_math.PRODUCT.name] = ops_math.PRODUCT.without_signatures(sig_math.NUVV_O_V_SIG)
+        self.supported_operations_map[ops_math.PRODUCT.name] = (
+            ops_math.PRODUCT.without_signatures(sig_math.NUVV_O_V_SIG)
+        )
 
     def resolve_attribute_type(self, node, attributes):
         """Resolve the attribute type for a Maya node attribute chain.
@@ -108,9 +111,10 @@ class MayaBackend(Backend):
                 continue
             if isinstance(node, BackendNode):
                 node_dict[node.name] = {"node": wrap_node(node.name), "map": None}
+                continue
             if node.operation in self._node_mapping:
                 maya_sig_map = self._node_mapping[node.operation].sig_map()
-                node_sig = node.get_operation_compatable_signature()
+                node_sig = node.get_operation_signature()
                 if node_sig not in maya_sig_map:
                     raise RuntimeError(
                         f"node signature not found for {node_sig} for operation {node.operation.name}"
@@ -125,6 +129,9 @@ class MayaBackend(Backend):
                         continue
                     node_dict[node.name] = {"node": maya_node, "map": node_map}
                     break
+            else:
+                raise KeyError(f"node {node} not created")
+
         return node_dict
 
     def _create_connections(self, graph, node_dict):
@@ -186,7 +193,9 @@ class MayaBackend(Backend):
                     dest_chld_attr.set_connect(source_attr)
 
             # if both have children
-            elif (isinstance(source_attr, MAttr) and source_attr.has_children()) and (dest_attr.has_children()):
+            elif (isinstance(source_attr, MAttr) and source_attr.has_children()) and (
+                dest_attr.has_children()
+            ):
                 source_len = len(source_attr)
                 dest_len = len(dest_attr)
                 if source_len == dest_len:

@@ -1,6 +1,8 @@
 """Directed graph primitives for computation nodes, ports, and connections."""
 
-from ..core import types_is_compatable
+from __future__ import annotations
+from ..core.attribute_types import types_is_compatable
+from ..core.operation import match_signature
 from . import attribute_types
 from . import operation
 from typing import Callable, Union
@@ -17,8 +19,8 @@ class Graph:
         self._node_name_counters = {}  # Track count per operation name
 
     def add_node(
-        self, name: str = None, operation_=None, signature=None, node: "Node" = None
-    ) -> "Node":
+        self, name: str = None, operation_=None, signature=None, node: Node = None
+    ) -> Node:
         """Add a node or operation node and return the stored node."""
         # Return node if already in graph
         if node is not None:
@@ -40,7 +42,7 @@ class Graph:
             self.nodes[name] = node
             return node
 
-    def output_dest_ports(self, node: "Node") -> list["InputPort"]:
+    def output_dest_ports(self, node: Node) -> list["InputPort"]:
         """Return input ports connected to outputs of ``node``."""
         output_ports = []
         for output in node.outputs.values():
@@ -49,13 +51,13 @@ class Graph:
 
         return output_ports
 
-    def output_nodes(self, node: "Node") -> list["Node"]:
+    def output_nodes(self, node: Node) -> list["Node"]:
         """Return nodes receiving output from ``node``."""
         output_ports = self.output_dest_ports(node)
 
         return [x.node for x in output_ports]
 
-    def input_src_ports(self, node: "Node") -> list["OutputPort"]:
+    def input_src_ports(self, node: Node) -> list["OutputPort"]:
         """Return output ports connected to inputs of ``node``."""
         input_ports = []
         for input in node.inputs.values():
@@ -65,46 +67,34 @@ class Graph:
 
         return input_ports
 
-    def input_nodes(self, node: "Node") -> list["Node"]:
+    def input_nodes(self, node: Node) -> list["Node"]:
         """Return nodes supplying inputs to ``node``."""
         input_ports = self.input_src_ports(node)
 
         return [x for x in input_ports.node]
 
     def get_upstream_node(
-        self, node: "Node", predicate: Callable, override_op: operation.Operation
+        self,
+        node: Node,
+        replace_ops: list[operation.Operation],
+        check_signature: operation.Signature,
     ):
         """Walk upstream while nodes satisfy a predicate and type constraints."""
         current_node = node
         node_type = node.output_types
         if len(node_type) != 1:
             return current_node
-        node_type = node_type[0]
-        replace_out_type, replace_sig = operation.match_signature(
-            override_op, node.get_signature()
-        )
-        if any(x is None for x in [replace_out_type, replace_sig]):
-            return node
-        check_sig_op = operation.Operation("check_sig", signatures=replace_sig)
         while True:
             output_nodes = self.output_nodes(current_node)
             if len(output_nodes) != 1:
                 break
-            output_node = output_nodes[0]
-            output_types = output_node.output_types
-            if not len(output_types) == 1 and node_type.is_compatable(output_types[0]):
-                break
-            if not predicate(output_node):
-                break
-            # if different signatures
-            _, sig = operation.match_signature(
-                check_sig_op, current_node.get_signature()
-            )
+            output_nodes = output_nodes[0]
+            _, sig = match_signature(check_signature, output_nodes.get_signature())
             if sig is None:
                 break
-
-            current_node = output_nodes[0]
-
+            if output_nodes.operation not in replace_ops:
+                break
+            current_node = output_nodes
         return current_node
 
     def get_next_numeric_name(self, name):
@@ -116,7 +106,7 @@ class Graph:
 
         return f"{name}{self._node_name_counters[name]}"
 
-    def connect(self, source: "OutputPort", destination: "InputPort"):
+    def connect(self, source: OutputPort, destination: InputPort):
         """Connect an output port to an input port."""
         connection = Connection(source, destination)
         self.connections[connection] = connection
@@ -147,7 +137,7 @@ class Graph:
             if connection in self.connections:
                 self.connections.pop(connection)
 
-    def delete_node(self, node: "Node"):
+    def delete_node(self, node: Node):
         """Remove a node and force-disconnect all of its ports."""
         if node.name in self.nodes:
             for input in node.inputs.values():
@@ -158,7 +148,7 @@ class Graph:
                     self.disconnect(output, force=True)
             self.nodes.pop(node.name)
 
-    def delete_port(self, port: "Port"):
+    def delete_port(self, port: Port):
         """Remove a port and any connections attached to it."""
         if isinstance(port, InputPort):
             if port.connection is not None:
@@ -170,7 +160,7 @@ class Graph:
                     self.disconnect(connection)
             port.node.outputs.pop(port.name)
 
-    def collapse_single_input_node(self, node: "Node"):
+    def collapse_single_input_node(self, node: Node):
         """Replace a single-input operation with its upstream source."""
         if isinstance(node, (ConstNode, BackendNode)):
             return False
@@ -185,7 +175,7 @@ class Graph:
             return True
         return False
 
-    def get_nodes(self) -> list["Node"]:
+    def get_nodes(self) -> list[Node]:
         """Return all nodes currently stored in the graph."""
         return list(self.nodes.values())
 
@@ -240,7 +230,7 @@ class Port:
         node: The Node this port belongs to.
     """
 
-    def __init__(self, name: str, type_: attribute_types.AttributeType, node: "Node"):
+    def __init__(self, name: str, type_: attribute_types.AttributeType, node: Node):
         """Create a port attached to a node with the given type."""
         self.name = name
         self.type_ = type_
@@ -262,9 +252,7 @@ class Port:
         """
         port_list = [self.node.inputs[port] for port in self.node.inputs.keys()]
         if isinstance(self, OutputPort):
-            port_list = [
-                self.node.outputs[port] for port in self.node.outputs.keys()
-            ]
+            port_list = [self.node.outputs[port] for port in self.node.outputs.keys()]
 
         if self in port_list:
             return port_list.index(self)
@@ -278,7 +266,7 @@ class InputPort(Port):
         connection: The Connection feeding into this port (or None if unconnected).
     """
 
-    def __init__(self, name: str, type_: attribute_types.AttributeType, node: "Node"):
+    def __init__(self, name: str, type_: attribute_types.AttributeType, node: Node):
         """Create an input port with no incoming connection."""
         super().__init__(name, type_, node)
         self.connection = None
@@ -403,31 +391,6 @@ class Node:
         port_map[name] = port
         return port
 
-    def get_operation_compatable_signature(self) -> operation.Signature:
-        """Return the operation signature compatible with this node's ports.
-
-        The operation inputs are checked against the node's input types, then
-        the resulting output types are checked against the node's outputs.
-
-        Returns:
-            The matching signature, or ``None`` when the node has no
-            operation, has the wrong number of outputs, or has incompatible
-            output types.
-        """
-        sig = self.get_signature()
-        if self.operation is None:
-            return None
-        _, ret_sig = operation.check_signature(
-            self.operation, [x.types_ for x in sig.inputs]
-        )
-        output_ports = list(self.outputs.values())
-        if len(ret_sig.outputs) != len(output_ports):
-            return None
-        for parm, port in zip(ret_sig.outputs, output_ports):
-            if not types_is_compatable(parm.types_, port.type_):
-                return None
-        return ret_sig
-
     def get_signature(self) -> operation.Signature:
         """Build a signature from the node's current input and output ports.
 
@@ -448,6 +411,18 @@ class Node:
         )
 
         return operation.Signature(inputs=inputs, outputs=outputs)
+
+    def get_operation_signature(self) -> operation.Signature:
+        """gets Operation Signature
+
+        Returns:
+            operation.Signature:
+        """
+        if self.operation_signature is not None:
+            return self.operation_signature
+        _, sig = match_signature(self.operation, self.get_signature())
+        self.operation_signature = sig
+        return self.operation_signature
 
     def get_next_numeric_port_name(self, name: str) -> str:
         """Return the next unique numbered name for a port base name."""

@@ -292,7 +292,7 @@ class Matrix(om2.MMatrix):
         """
         return om2.QuaternionOrPoint().setValue(self)
 
-    def set_transform(self, transform: "Transform", world_space: bool = False):
+    def set_transform(self, transform: Transform, world_space: bool = False):
         """Sets tranform with it's contained matrix
 
         Args:
@@ -2128,7 +2128,7 @@ class Attr:
             shift_down (bool, optional): _description_. Defaults to False
         """
 
-        def __reconnect_attr(src_attr: "Attr", dest_attr: "Attr"):
+        def __reconnect_attr(src_attr: Attr, dest_attr: Attr):
             """given a src attr and dest attr transfer all connections and data to dest attr
 
             Args:

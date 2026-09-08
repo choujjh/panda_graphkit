@@ -116,7 +116,7 @@ class Signature:
         inputs: tuple[Parameter] = None,
         outputs: tuple[Parameter] = None,
         commutative: bool = None,
-    )->Signature:
+    ) -> Signature:
         """Replace Fields in Signature for copy of signature
 
         Args:
@@ -170,7 +170,7 @@ class Operation:
     """
 
     name: str
-    signatures: tuple[Signature, ...]
+    signatures: tuple[Signature, ...] = field(compare=False)
 
     def __repr__(self):
         """Return a concise representation containing name and signature count."""
@@ -184,7 +184,9 @@ class Operation:
                 curr_var = [curr_var]
             object.__setattr__(self, "signatures", tuple(curr_var))
 
-    def replace(self, name:str=None, signatures: tuple[Signature]=None) -> Operation:
+    def replace(
+        self, name: str = None, signatures: tuple[Signature] = None
+    ) -> Operation:
         """Replaces fields and returns a new Operation
 
         Args:
@@ -206,13 +208,12 @@ class Operation:
         Returns:
             Operation:
         """
-        new_signatures = [sig for sig in  self.signatures if sig not in signatures]
+        new_signatures = [sig for sig in self.signatures if sig not in signatures]
         return self.replace(signatures=new_signatures)
 
 
-
 def check_signature(
-    operation: Operation,
+    operation: Operation | Signature,
     arg_types: list[attribute_types.AttributeType] | Signature,
 ) -> tuple[attribute_types.AttributeType, Signature]:
     """Check if argument types match a signature in the operation.
@@ -244,7 +245,7 @@ def check_signature(
 
 
 def match_signature(
-    operation: Operation,
+    operation: Operation | Signature,
     arg_types: list[attribute_types.AttributeType] | Signature,
 ) -> tuple[attribute_types.AttributeType, Signature]:
     """tries to find a matching signature. returns None otherwise
@@ -265,10 +266,28 @@ def match_signature(
     Raises:
         TypeError: If no matching signature is found.
     """
+    output_types = None
     if isinstance(arg_types, Signature):
+        output_types = [x.types_ for x in arg_types.outputs]
         arg_types = [x.types_ for x in arg_types.inputs]
-    for signature in operation.signatures:
+    if arg_types is None or operation is None:
+        return None, None
+    signature_list = [operation]
+    if isinstance(operation, Operation):
+        signature_list = operation.signatures
+
+    for signature in signature_list:
+        if signature is None:
+            continue
         first_input = signature.inputs[0] if signature.inputs else None
+        # check output
+        if output_types is not None:
+            if not all(
+                types_is_compatable(arg_type, param.types_)
+                for arg_type, param in zip(output_types, signature.outputs)
+            ):
+                continue
+        # if variadict
         if (
             first_input
             and first_input.variadict
@@ -281,6 +300,7 @@ def match_signature(
                 if signature.outputs[0] in [attribute_types.NUMBER]:
                     return attribute_types.infer_return_type(arg_types), signature
                 return signature.outputs[0].types_[0], signature
+        # check inputs len match
         if len(arg_types) == len(signature.inputs):
             if all(
                 types_is_compatable(arg_type, param.types_)

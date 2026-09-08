@@ -9,7 +9,7 @@ from ..core import (
     Port,
     OutputPort,
     Operation,
-    AttributeType,
+    Signature,
     infer_return_type,
     match_signature,
 )
@@ -169,7 +169,7 @@ class Compiler:
             changed |= self._combine_constants()
 
     def _simplify_operation(
-        self, backend_node_optimize: BackendNodeOptimization, prefix:str, name:str
+        self, backend_node_optimize: BackendNodeOptimization, prefix: str, name: str
     ) -> bool:
         """Converts back to simpler functions ie sum -> add if applicable
 
@@ -184,7 +184,11 @@ class Compiler:
         nice_name = f"{name}_" if name != "" else ""
         full_prefix = f"{prefix}_{nice_name}"
 
-        simple_op = [x for x in backend_node_optimize.checked_ops if x != backend_node_optimize.operand]
+        simple_op = [
+            x
+            for x in backend_node_optimize.checked_ops
+            if x != backend_node_optimize.operand
+        ]
         if not simple_op:
             return changed
         simple_op = simple_op[0]
@@ -196,14 +200,14 @@ class Compiler:
                 changed = True
                 key = node.name
                 self.graph.nodes.pop(key)
-                node.name = self.graph.get_next_numeric_name(f"{full_prefix}{simple_op.name}")
+                node.name = self.graph.get_next_numeric_name(
+                    f"{full_prefix}{simple_op.name}"
+                )
                 node.operation_signature = signature
                 node.operation = simple_op
                 self.graph.nodes[node.name] = node
-                
 
         return changed
-
 
     def _flatten_operation(
         self, backend_node_optimize: BackendNodeOptimization, prefix: str, name: str
@@ -215,36 +219,55 @@ class Compiler:
         changed = False
         deleted_nodes = []
         replaced_ops = backend_node_optimize.checked_ops
-        merge_op = backend_node_optimize.operand
+
         for node in list(self.graph.get_nodes()):
-            top_node = self.graph.get_upstream_node(
-                node, lambda x: x.operation in replaced_ops, merge_op
-            )
-            _, sig = match_signature(merge_op, top_node.get_signature())
+            # if node is deleted
             if (
                 node in deleted_nodes
+                or node.get_operation_signature() is None
                 or node.operation not in replaced_ops
-                or top_node == node
             ):
                 continue
-            dest_connections = self.graph.output_dest_ports(top_node)
-            output_port_type = list(top_node.outputs.values())[0].type_
-            nodes, output_ports = self._traverse_flatten_nodes(top_node, replaced_ops)
+
+            # Get signature
+            _, check_signature = match_signature(
+                backend_node_optimize.operand, node.get_operation_signature()
+            )
+
+            # Get top node
+            top_node = self.graph.get_upstream_node(node, replaced_ops, check_signature)
+            if top_node == node or top_node is None:
+                continue
+
+            # Traverse graph and get ports and nodes
+            nodes, output_ports = self._traverse_flatten_nodes(top_node, replaced_ops, check_signature)
             if len(nodes) == 1:
                 continue
 
+            changed = True
+
+            # Getting top node connections
+            dest_connections = self.graph.output_dest_ports(top_node)
+            output_port_type = list(top_node.outputs.values())[0].type_
+
+            # delete nodes
             deleted_nodes.extend(nodes)
             changed = True
             for curr_node in nodes:
                 self.graph.delete_node(curr_node)
 
+            # Add new merge node
+            merge_op = backend_node_optimize.operand
             added_node = self.graph.add_node(
-                name=f"{full_prefix}{merge_op.name}", operation_=merge_op, signature=sig
+                name=f"{full_prefix}{merge_op.name}", operation_=merge_op, signature=check_signature
             )
+
+            # adding input ports and connecting them to other port for new node
             for output_port in output_ports:
                 added_input = added_node.add_input(output_port.type_)
                 self.graph.connect(output_port, added_input)
 
+            # connecting new port to everything what the old max port was connected to before
             dest_port = added_node.add_output(output_port_type)
             for dest in dest_connections:
                 self.graph.connect(dest_port, dest)
@@ -255,22 +278,20 @@ class Compiler:
         self,
         node: Node,
         operations: list[Operation],
-        types_: AttributeType = None,
+        check_signature: Signature | Operation,
     ) -> tuple[list[Node], list[OutputPort]]:
         """Collect a compatible operation chain and its external inputs."""
         nodes = list()
         output_ports = list()
 
-        if types_ is None:
-            output_types = node.output_types
-            if len(output_types) != 1:
-                return [node], []
-            types_ = node.output_types[0]
+        _, signature = match_signature(check_signature, node.get_signature())
+        if signature is None:
+            return [], []
 
         for input_port in self.graph.input_src_ports(node):
             if input_port.node.operation in operations:
                 child_nodes, child_output_ports = self._traverse_flatten_nodes(
-                    input_port.node, operations, types_
+                    input_port.node, operations, check_signature
                 )
                 nodes.extend(child_nodes)
                 output_ports.extend(child_output_ports)
@@ -278,7 +299,6 @@ class Compiler:
                 output_ports.append(input_port)
 
         nodes.append(node)
-
         return nodes, output_ports
 
     def _eliminate_identity_operations(self) -> bool:
@@ -325,8 +345,8 @@ class Compiler:
             input_const_connections = []
             # if its commutative
             if (
-                node.operation_signature is not None
-                and node.operation_signature.commutative
+                node.get_operation_signature() is not None
+                and node.get_operation_signature().commutative
             ):
                 input_const_connections = [
                     [
@@ -351,7 +371,10 @@ class Compiler:
                 if input_current_grp:
                     input_const_connections.append(input_current_grp)
 
-            if len(input_const_connections) <= 0 or len(input_const_connections[0]) <=1:
+            if (
+                len(input_const_connections) <= 0
+                or len(input_const_connections[0]) <= 1
+            ):
                 continue
 
             # if it's a constructed data type
@@ -370,7 +393,10 @@ class Compiler:
                     deleted_nodes.append(connection.source.node)
                     self.graph.disconnect(connection)
                     self.graph.delete_port(connection.destination)
-                    if len(list(self.graph.output_dest_ports(connection.source.node))) == 0:
+                    if (
+                        len(list(self.graph.output_dest_ports(connection.source.node)))
+                        == 0
+                    ):
                         self.graph.delete_node(connection.source.node)
 
                 new_const = self.graph.add_node(
@@ -411,7 +437,10 @@ class Compiler:
                     deleted_nodes.append(connection.source.node)
                     self.graph.disconnect(connection)
                     self.graph.delete_port(connection.destination)
-                    if len(list(self.graph.output_dest_ports(connection.source.node))) == 0:
+                    if (
+                        len(list(self.graph.output_dest_ports(connection.source.node)))
+                        == 0
+                    ):
                         self.graph.delete_node(connection.source.node)
 
             changed |= self.graph.collapse_single_input_node(node)

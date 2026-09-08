@@ -202,6 +202,20 @@ MULTIPLY = OperationMap(
         ),
         NodeMap(
             operation_name=ops_math.MULTIPLY.name,
+            signature=sig_math.N_V_O_V_SIG,
+            mapped_node_type="multiplyDivide",
+            input_attributes=("input1", "input2"),
+            output_attributes=("output",),
+        ),
+        NodeMap(
+            operation_name=ops_math.MULTIPLY.name,
+            signature=sig_math.V_N_O_V_SIG,
+            mapped_node_type="multiplyDivide",
+            input_attributes=("input1", "input2"),
+            output_attributes=("output",),
+        ),
+        NodeMap(
+            operation_name=ops_math.MULTIPLY.name,
             signature=sig_math.V_V_O_V_SIG,
             mapped_node_type="multiplyDivide",
             input_attributes=("input1", "input2"),
