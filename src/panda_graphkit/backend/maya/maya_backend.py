@@ -1,6 +1,7 @@
 """Maya backend for materializing GraphKit operations and connections."""
 
 from collections.abc import Iterable
+import re
 from typing import Any
 from ...core import (
     FLOAT,
@@ -97,6 +98,17 @@ class MayaBackend(Backend):
         if attr_type not in self._type_mapping:
             raise TypeError(f"Unsupported type {attr_type} for expression")
         return self._type_mapping[attr_type]
+
+    def resolve_reference(self, value):
+        if isinstance(value, MAttr):
+            ret_list = [str(value.node)]
+            ret_list.extend(
+                part for part in re.split(r"[.\[\]]", value.attr_name) if part
+            )
+            return ret_list
+        if isinstance(value, MNode):
+            return [str(value)]
+        return value
 
     def _create_nodes(self, graph):
         """Create Maya nodes for each backend-capable graph node.
@@ -213,7 +225,7 @@ class MayaBackend(Backend):
             else:
                 dest_attr.set_connect(source_attr)
 
-    def _map_variables(self, variables:dict[str, Any], node_dict: dict[Node:Any]):
+    def _map_variables(self, variables: dict[str, Any], node_dict: dict[Node:Any]):
         """Maps backend to variables
 
         Args:
@@ -224,12 +236,13 @@ class MayaBackend(Backend):
         for key, value in variables.items():
             if value.node.name not in node_dict:
                 ret_variables[key] = None
+                continue
             port_map = node_dict[value.node.name]
-            ret_variables[key] = self._get_attr(value, port_map["node"], port_map["map"])
+            ret_variables[key] = self._get_attr(
+                value, port_map["node"], port_map["map"]
+            )
 
         return ret_variables
-            
-        
 
     def _get_attr(self, port: Port, maya_node: MNode, node_map: NodeMap) -> MAttr:
         """Gets attribute from mapped maya node

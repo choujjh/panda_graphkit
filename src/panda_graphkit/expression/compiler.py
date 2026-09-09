@@ -33,6 +33,15 @@ class Compiler:
         self.optimize_graph(prefix, name)
         self.graph.clean_names()
 
+    def bind_inputs(self, input_bindings: dict[str : ast.ASTNode], prefix=str):
+        """Convert analyzed input AST nodes into graph output ports."""
+        for name, input_ast in input_bindings.items():
+            if not isinstance(input_ast, (ast.Literal, ast.AttributeAccess)):
+                continue
+            if input_ast.type_ is None:
+                continue
+            self.variables[name] = self.ast_to_graph(input_ast, prefix, name)
+
     def ast_to_graph(self, ast_node: ast.ASTNode, prefix: str, name: str) -> Port:
         """Convert one AST node and its children into graph ports."""
         nice_name = f"{name}_" if name != "" else ""
@@ -240,7 +249,9 @@ class Compiler:
                 continue
 
             # Traverse graph and get ports and nodes
-            nodes, output_ports = self._traverse_flatten_nodes(top_node, replaced_ops, check_signature)
+            nodes, output_ports = self._traverse_flatten_nodes(
+                top_node, replaced_ops, check_signature
+            )
             if len(nodes) == 1:
                 continue
 
@@ -248,7 +259,8 @@ class Compiler:
 
             # Getting top node connections
             dest_connections = self.graph.output_dest_ports(top_node)
-            output_port_type = list(top_node.outputs.values())[0].type_
+            top_node_outputs = list(top_node.outputs.values())[0]
+            output_port_type = top_node_outputs.type_
 
             # delete nodes
             deleted_nodes.extend(nodes)
@@ -259,7 +271,9 @@ class Compiler:
             # Add new merge node
             merge_op = backend_node_optimize.operand
             added_node = self.graph.add_node(
-                name=f"{full_prefix}{merge_op.name}", operation_=merge_op, signature=check_signature
+                name=f"{full_prefix}{merge_op.name}",
+                operation_=merge_op,
+                signature=check_signature,
             )
 
             # adding input ports and connecting them to other port for new node
@@ -271,6 +285,11 @@ class Compiler:
             dest_port = added_node.add_output(output_port_type)
             for dest in dest_connections:
                 self.graph.connect(dest_port, dest)
+
+            # remapping top node output in variable dict
+            for key in self.variables:
+                if top_node_outputs == self.variables[key]:
+                    self.variables[key] = dest_port
 
         return changed
 

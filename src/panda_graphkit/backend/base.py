@@ -226,6 +226,21 @@ class Backend(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def resolve_reference(self, value: Any) -> list[str] | Any:
+        """Gets specific package into an usable data for ast Node
+
+        Args:
+            value (Any):
+
+        Raises:
+            NotImplementedError:
+
+        Returns:
+            ast.ASTNode:
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def _create_nodes(self, graph: Graph) -> dict[Node:Any]:
         """Create backend nodes corresponding to graph nodes.
 
@@ -246,9 +261,9 @@ class Backend(ABC):
             node_dict: Backend node data returned by :meth:`_create_nodes`.
         """
         raise NotImplementedError
-    
+
     @abstractmethod
-    def _map_variables(self, variables:dict[str, Any], node_dict: dict[Node:Any]):
+    def _map_variables(self, variables: dict[str, Any], node_dict: dict[Node:Any]):
         """Maps backend to variables
 
         Args:
@@ -257,7 +272,7 @@ class Backend(ABC):
         """
         raise NotImplementedError
 
-    def build_graph(self, graph: Graph, variables:dict)-> tuple:
+    def build_graph(self, graph: Graph, variables: dict) -> tuple:
         """Materialize graph nodes and then connect their backend attributes.
 
         Args:
@@ -267,7 +282,9 @@ class Backend(ABC):
         self._create_connections(graph, node_dict)
         ret_variables = self._map_variables(variables, node_dict)
 
-        return [x["node"] for x in node_dict.values() if x["map"] is not None], ret_variables
+        return [
+            x["node"] for x in node_dict.values() if x["map"] is not None
+        ], ret_variables
 
     def resolve_operation(self, operation_name: str) -> Operation:
         """Resolve an operation name to its corresponding `Operation` object.

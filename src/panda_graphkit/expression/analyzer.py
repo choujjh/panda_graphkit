@@ -6,6 +6,9 @@ resolves operations and attributes using the backend, and infers
 numeric return types based on input argument types.
 """
 
+from collections.abc import Mapping
+from typing import Any
+
 from . import ast
 from ..core import STRING, FLOAT, INT, check_signature
 from ..backend import base
@@ -23,14 +26,28 @@ class Analyzer:
         variables: Dict mapping variable names to their AST nodes for lookup.
     """
 
-    def __init__(self, backend: base.Backend):
+    def __init__(self, backend: base.Backend, backend_variables={}):
         """Initialize the analyzer with a backend.
 
         Args:
             backend: The backend to use for resolving operations and attributes.
         """
         self.backend = backend
+        self.backend_variables = backend_variables
         self.variables = {}
+
+        self._initialize_variables()
+
+    def _initialize_variables(self) -> None:
+        """Initalize Variable map"""
+        for key, value in self.backend_variables.items():
+            ref = self.backend.resolve_reference(value)
+            if ref == value:
+                self.variables[key] = ast.Literal(value)
+            else:
+                node = ast.Identifier(ref[0])
+                attrs = [ast.Identifier(x) for x in ref[1:]]
+                self.variables[key] = ast.AttributeAccess(node=node, attributes=attrs)
 
     def analyze(self, node):
         """Analyze an AST node and assign type information.
@@ -59,7 +76,11 @@ class Analyzer:
 
         if isinstance(node, ast.Identifier):
             if node.name in self.variables:
-                node.type_ = self.variables[node.name].type_
+                if self.variables[node.name].type_ is None:
+                    var = self.analyze(self.variables[node.name])
+                    node.type_ = var
+                else:
+                    node.type_ = self.variables[node.name].type_
                 return node.type_
             else:
                 raise NameError(f"Undefined variable: {node.name}")
@@ -192,8 +213,15 @@ class Analyzer:
         Args:
             node: An AttributeAccess AST node.
         """
+        if node.node.name in self.variables:
+            var = node.node.name
+            node.node = self.variables[var].node
+            attributes = self.variables[var].attributes
+            attributes.extend(node.attributes)
+            node.attributes = attributes
         type_ = self.backend.resolve_attribute_type(node.node, node.attributes)
         node.type_ = type_
+        return node.type_
 
     def analyze_assignment(self, node: ast.Assignment):
         """Analyze an assignment node.
