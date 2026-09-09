@@ -5,6 +5,6 @@ and represent expression source code as an abstract syntax tree
 (AST) for further processing.
 """
 
-from .builder import build_expression
+from .builder import ExpressionResult, build_expression
 
-__all__ = ["build_expression"]
+__all__ = ["ExpressionResult", "build_expression"]

@@ -1,5 +1,6 @@
 """Build typed GraphKit graphs from expression source text."""
-
+from dataclasses import dataclass, field
+from typing import Any
 from . import tokenizer
 from . import analyzer
 from ..core import Graph
@@ -8,10 +9,15 @@ from ..backend import base
 from . import compiler
 from . import parser
 
+@dataclass
+class ExpressionResult:
+    graph: Graph
+    nodes: list = field(default_factory=list)
+    variables: dict[str, Any] = field(default_factory=dict)
 
 def build_expression(
-    expression: str, prefix: str, name: str, backend: base.Backend, **vars
-) -> Graph:
+    expression: str, prefix: str, name: str, backend: base.Backend, inputs:dict={}
+) -> ExpressionResult:
     """Parse, analyze, compile, and materialize an expression graph.
 
     Args:
@@ -22,7 +28,7 @@ def build_expression(
         **vars: Optional variables supplied by the caller.
 
     Returns:
-        The compiled and backend-built Graph.
+        An ExpressionResult containing the built graph, graph nodes, and variable ports.
     """
     tokens = tokenizer.Tokenizer(expression).tokenize()
     program = parser.Parser(tokens).parse()
@@ -31,7 +37,10 @@ def build_expression(
     analyzer_.analyze(program)
     compiler_ = compiler.Compiler(backend)
     compiler_.compile(program, prefix, name)
+    nodes, variables = backend.build_graph(compiler_.graph, compiler_.variables)
 
-    backend.build_graph(compiler_.graph)
-
-    return compiler_.graph
+    return ExpressionResult(
+        graph=compiler_.graph,
+        nodes=nodes,
+        variables=variables,
+    )

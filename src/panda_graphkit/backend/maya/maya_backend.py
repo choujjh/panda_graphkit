@@ -1,6 +1,7 @@
 """Maya backend for materializing GraphKit operations and connections."""
 
 from collections.abc import Iterable
+from typing import Any
 from ...core import (
     FLOAT,
     MATRIX4,
@@ -8,6 +9,7 @@ from ...core import (
     VECTOR3,
     INT,
     Port,
+    Node,
     ConstNode,
     BackendNode,
 )
@@ -210,6 +212,24 @@ class MayaBackend(Backend):
 
             else:
                 dest_attr.set_connect(source_attr)
+
+    def _map_variables(self, variables:dict[str, Any], node_dict: dict[Node:Any]):
+        """Maps backend to variables
+
+        Args:
+            graph: Graph containing the connections to materialize.
+            node_dict: Backend node data returned by :meth:`_create_nodes`.
+        """
+        ret_variables = {}
+        for key, value in variables.items():
+            if value.node.name not in node_dict:
+                ret_variables[key] = None
+            port_map = node_dict[value.node.name]
+            ret_variables[key] = self._get_attr(value, port_map["node"], port_map["map"])
+
+        return ret_variables
+            
+        
 
     def _get_attr(self, port: Port, maya_node: MNode, node_map: NodeMap) -> MAttr:
         """Gets attribute from mapped maya node

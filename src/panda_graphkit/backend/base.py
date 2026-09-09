@@ -246,8 +246,18 @@ class Backend(ABC):
             node_dict: Backend node data returned by :meth:`_create_nodes`.
         """
         raise NotImplementedError
+    
+    @abstractmethod
+    def _map_variables(self, variables:dict[str, Any], node_dict: dict[Node:Any]):
+        """Maps backend to variables
 
-    def build_graph(self, graph: Graph):
+        Args:
+            graph: Graph containing the connections to materialize.
+            node_dict: Backend node data returned by :meth:`_create_nodes`.
+        """
+        raise NotImplementedError
+
+    def build_graph(self, graph: Graph, variables:dict)-> tuple:
         """Materialize graph nodes and then connect their backend attributes.
 
         Args:
@@ -255,6 +265,9 @@ class Backend(ABC):
         """
         node_dict = self._create_nodes(graph)
         self._create_connections(graph, node_dict)
+        ret_variables = self._map_variables(variables, node_dict)
+
+        return [x["node"] for x in node_dict.values() if x["map"] is not None], ret_variables
 
     def resolve_operation(self, operation_name: str) -> Operation:
         """Resolve an operation name to its corresponding `Operation` object.
