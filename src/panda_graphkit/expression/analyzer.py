@@ -5,10 +5,6 @@ performs type checking, type inference, and semantic validation. It
 resolves operations and attributes using the backend, and infers
 numeric return types based on input argument types.
 """
-
-from collections.abc import Mapping
-from typing import Any
-
 from . import ast
 from ..core import STRING, FLOAT, INT, check_signature
 from ..backend import base
@@ -216,9 +212,7 @@ class Analyzer:
         if node.node.name in self.variables:
             var = node.node.name
             node.node = self.variables[var].node
-            attributes = self.variables[var].attributes
-            attributes.extend(node.attributes)
-            node.attributes = attributes
+            node.attributes = [*self.variables[var].attributes, *node.attributes]
         type_ = self.backend.resolve_attribute_type(node.node, node.attributes)
         node.type_ = type_
         return node.type_
