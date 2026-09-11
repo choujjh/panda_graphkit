@@ -4,8 +4,10 @@ from ...signatures import math as sig_math
 
 __all__ = [
     "SIN",
+    "ACOS",
     "COS",
     "REMAP",
+    "DIST",
     "ADD",
     "SUM",
     "SUBTRACT",
@@ -23,6 +25,19 @@ SIN = OperationMap(
             operation_name=ops_math.SIN.name,
             signature=sig_math.N_O_F_SIG,
             mapped_node_type="sin",
+            input_attributes=("input",),
+            output_attributes=("output",),
+        ),
+    ],
+)
+
+ACOS = OperationMap(
+    operation=ops_math.ACOS,
+    node_maps=[
+        NodeMap(
+            operation_name=ops_math.ACOS.name,
+            signature=sig_math.N_O_F_SIG,
+            mapped_node_type="acos",
             input_attributes=("input",),
             output_attributes=("output",),
         ),
@@ -58,6 +73,31 @@ REMAP = OperationMap(
             output_attributes=("outValue",),
         ),
     ],
+)
+DIST = OperationMap(
+    operation=ops_math.DIST,
+    node_maps=[
+        NodeMap(
+            operation_name=ops_math.DIST.name,
+            signature=sig_math.M_M_O_N_SIG,
+            mapped_node_type="distanceBetween",
+            input_attributes=(
+                "inMatrix1",
+                "inMatrix2",
+            ),
+            output_attributes=("distance",),
+        ),
+        NodeMap(
+            operation_name=ops_math.DIST.name,
+            signature=sig_math.V_V_O_N_SIG,
+            mapped_node_type="distanceBetween",
+            input_attributes=(
+                "point1",
+                "point2",
+            ),
+            output_attributes=("distance",),
+        ),
+    ]
 )
 ADD = OperationMap(
     operation=ops_math.ADD,
@@ -319,7 +359,7 @@ MATRIX = OperationMap(
     node_maps=[
         NodeMap(
             operation_name=ops_math.MATRIX.name,
-            signature=sig_math.N16_O_M,
+            signature=sig_math.N16_O_M_SIG,
             mapped_node_type="fourByFourMatrix",
             input_attributes=tuple(f"in{index // 4}{index % 4}" for index in range(16)),
             output_attributes=("output",),

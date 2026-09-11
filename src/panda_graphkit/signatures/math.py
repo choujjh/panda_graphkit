@@ -27,9 +27,11 @@ __all__ = [
     "MV_O_M_SIG",
     "M_M_O_M_SIG",
     "M_V_O_V_SIG",
-    "N4_O_V",
-    "N_N_N_O_V",
-    "N16_O_M",
+    "N4_O_V_SIG",
+    "N_N_N_O_V_SIG",
+    "N16_O_M_SIG",
+    "M_M_O_N_SIG",
+    "V_V_O_N_SIG",
 ]
 
 
@@ -106,7 +108,7 @@ M_V_O_V_SIG = Signature(
     ),
     outputs=Parameter("output", VECTOR),
 )
-N4_O_V = Signature(
+N4_O_V_SIG = Signature(
     inputs=(
         Parameter("x", NUMBER),
         Parameter("y", NUMBER),
@@ -115,14 +117,14 @@ N4_O_V = Signature(
     ),
     outputs=Parameter("output", VECTOR),
 )
-N_N_O_V = Signature(
+N_N_O_V_SIG = Signature(
     inputs=(
         Parameter("x", NUMBER),
         Parameter("y", NUMBER),
     ),
     outputs=Parameter("output", VECTOR),
 )
-N_N_N_O_V = Signature(
+N_N_N_O_V_SIG = Signature(
     inputs=(
         Parameter("x", NUMBER),
         Parameter("y", NUMBER),
@@ -130,7 +132,7 @@ N_N_N_O_V = Signature(
     ),
     outputs=Parameter("output", VECTOR),
 )
-N16_O_M = Signature(
+N16_O_M_SIG = Signature(
     inputs=(
         Parameter("cell00", NUMBER),
         Parameter("cell01", NUMBER),
@@ -150,4 +152,19 @@ N16_O_M = Signature(
         Parameter("cell33", NUMBER),
     ),
     outputs=Parameter("output", MATRIX4),
+)
+
+M_M_O_N_SIG = Signature(
+    inputs=(
+        Parameter("input1", MATRIX4),
+        Parameter("input2", MATRIX4)
+    ),
+    outputs=Parameter("output", NUMBER)
+)
+V_V_O_N_SIG = Signature(
+    inputs=(
+        Parameter("input1", VECTOR),
+        Parameter("input2", VECTOR)
+    ),
+    outputs=Parameter("output", NUMBER)
 )

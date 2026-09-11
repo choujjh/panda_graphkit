@@ -28,7 +28,10 @@ SIN = Operation(
     name="sin",
     signatures=sig_math.N_O_F_SIG,
 )
-
+ACOS = Operation(
+    name="acos",
+    signatures=sig_math.N_O_F_SIG,
+)
 COS = Operation(
     name="cos",
     signatures=sig_math.N_O_F_SIG,
@@ -38,6 +41,14 @@ REMAP = Operation(
     name="remap",
     signatures=sig_math.N5_O_N_SIG.replace_names(
         "input_min", "input_max", "output_min", "output_max", "value", "output"
+    ),
+)
+
+DIST = Operation(
+    name="dist",
+    signatures=(
+        sig_math.M_M_O_N_SIG,
+        sig_math.V_V_O_N_SIG,
     ),
 )
 
@@ -113,13 +124,13 @@ POWER = Operation(
 VECTOR = Operation(
     name="vector",
     signatures=(
-        sig_math.N_N_O_V,
-        sig_math.N_N_N_O_V,
-        sig_math.N4_O_V,
+        sig_math.N_N_O_V_SIG,
+        sig_math.N_N_N_O_V_SIG,
+        sig_math.N4_O_V_SIG,
     ),
 )
 
 MATRIX = Operation(
     name="matrix",
-    signatures=sig_math.N16_O_M,
+    signatures=sig_math.N16_O_M_SIG,
 )
