@@ -93,8 +93,8 @@ len3 = create_node("distanceBetween", inMatrix1=t3["worldMatrix"][0], inMatrix2=
 
 expression
 ```
-from panda_graphkit.expression import build_expression
-from panda_graphkit.backend.maya import maya_backend
+from panda_graphkit import build_expression
+from panda_graphkit.integrations.maya import MayaBackend
 
 exp_str = f"""
   c_squared = {len1["distance"]} ** 2
@@ -105,6 +105,6 @@ exp_str = f"""
   {t4["rx"]} = numer / denom
 """
 
-maya_backend_ = maya_backend.MayaBackend()
+maya_backend_ = MayaBackend()
 graph = build_expression(exp_str, "loc", "network", backend=maya_backend_)
 ```

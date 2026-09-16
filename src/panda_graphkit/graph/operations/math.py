@@ -11,8 +11,10 @@ from ..signatures import math as sig_math
 
 __all__ = (
     "SIN",
+    "ACOS",
     "COS",
     "REMAP",
+    "DIST",
     "ADD",
     "SUM",
     "SUBTRACT",
