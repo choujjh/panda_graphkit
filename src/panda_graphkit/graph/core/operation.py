@@ -8,10 +8,17 @@ are lightweight dataclasses used by validation and dispatch logic.
 from __future__ import annotations
 from dataclasses import dataclass, field
 from collections.abc import Iterable, Mapping
+from enum import Enum
 from types import MappingProxyType
-from ..utils import Associativity
 from ..core import types_is_compatable
 from . import attribute_types
+
+
+class Associativity(Enum):
+    """Direction in which operators of equal precedence group."""
+
+    LEFT = "left"
+    RIGHT = "right"
 
 
 @dataclass(frozen=True)

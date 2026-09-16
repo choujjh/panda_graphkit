@@ -4,7 +4,7 @@ from collections.abc import Iterable
 import re
 from typing import Any
 from ...utils import nested_to_dict
-from ...core import (
+from ...graph.core import (
     FLOAT,
     MATRIX4,
     VECTOR2,
@@ -15,9 +15,9 @@ from ...core import (
     ConstNode,
     BackendNode,
 )
-from ...operations import math as ops_math
-from ...signatures import math as sig_math
-from ..base import Backend, NodeMap, OperationMap, BackendNodeOptimization
+from ...graph.operations import math as ops_math
+from ...graph.signatures import math as sig_math
+from ...graph.backend.base import Backend, NodeMap, OperationMap, BackendNodeOptimization
 
 from ...maya import (
     create_node,
@@ -27,7 +27,7 @@ from ...maya import (
     Node as MNode,
     Attr as MAttr,
 )
-from . import maya_constants
+from . import constants
 
 
 class MayaBackend(Backend):
@@ -43,9 +43,9 @@ class MayaBackend(Backend):
         "long": INT,
     }
     _node_mapping = {
-        getattr(maya_constants, x).operation: getattr(maya_constants, x)
-        for x in maya_constants.__all__
-        if isinstance(getattr(maya_constants, x), OperationMap)
+        getattr(constants, x).operation: getattr(constants, x)
+        for x in constants.__all__
+        if isinstance(getattr(constants, x), OperationMap)
     }
     optimize_operations = [
         BackendNodeOptimization(

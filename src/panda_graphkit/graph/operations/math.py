@@ -6,8 +6,7 @@ common math functions such as `sin`, `cos`, `add`, `multiply`, and
 by downstream validation and dispatch.
 """
 
-from ..core import Operation
-from ..utils import Associativity
+from ..core import Associativity, Operation
 from ..signatures import math as sig_math
 
 __all__ = (

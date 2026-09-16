@@ -12,7 +12,7 @@ assignment statements.
 from .tokenizer import TokenType, Token
 from . import ast
 from ..backend.base import Backend
-from ..utils import Associativity
+from ..core import Associativity
 
 
 class Parser:

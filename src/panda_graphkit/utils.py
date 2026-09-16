@@ -1,13 +1,4 @@
-"""Shared small types used across graphkit modules."""
-
-from enum import Enum
-
-
-class Associativity(Enum):
-    """Direction in which operators of equal precedence group."""
-
-    LEFT = "left"
-    RIGHT = "right"
+"""Shared utility functions used across graphkit modules."""
 
 def nested_to_dict(data, indexes=(), depth=0, max_depth=300):
     result = {}
