@@ -9,6 +9,20 @@ from __future__ import annotations
 from dataclasses import dataclass
 from collections.abc import Iterable
 
+__all__ = [
+    "AttributeType",
+    "NUMBER",
+    "INT",
+    "FLOAT",
+    "VECTOR",
+    "VECTOR2",
+    "VECTOR3",
+    "BOOL",
+    "MATRIX4",
+    "STRING",
+    "infer_return_type",
+    "types_is_compatable",
+]
 
 @dataclass(frozen=True)
 class AttributeType:
@@ -115,18 +129,3 @@ VECTOR3 = AttributeType("Vector3", parent=VECTOR)
 BOOL = AttributeType("Bool")
 MATRIX4 = AttributeType("Matrix4")
 STRING = AttributeType("String")
-
-__all__ = [
-    "AttributeType",
-    "NUMBER",
-    "INT",
-    "FLOAT",
-    "VECTOR",
-    "VECTOR2",
-    "VECTOR3",
-    "BOOL",
-    "MATRIX4",
-    "STRING",
-    "infer_return_type",
-    "types_is_compatable",
-]

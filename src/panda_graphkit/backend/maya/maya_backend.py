@@ -3,6 +3,7 @@
 from collections.abc import Iterable
 import re
 from typing import Any
+from ...utils import nested_to_dict
 from ...core import (
     FLOAT,
     MATRIX4,
@@ -267,18 +268,3 @@ class MayaBackend(Backend):
         for attr in attrs:
             curr_attr = curr_attr[attr]
         return curr_attr
-
-
-def nested_to_dict(data, indexes=(), depth=0, max_depth=300):
-    result = {}
-    if depth >= max_depth:
-        return {}
-    for i, value in enumerate(data):
-        current_index = indexes + (i,)
-
-        if isinstance(value, list):
-            result.update(nested_to_dict(value, current_index, depth + 1))
-        else:
-            result[current_index] = value
-
-    return result

@@ -39,8 +39,9 @@ def build_expression(
     Returns:
         An ExpressionResult containing the built graph, graph nodes, and variable ports.
     """
-    tokens = tokenizer.Tokenizer(expression).tokenize()
-    program = parser.Parser(tokens).parse()
+    tokenizer_ = tokenizer.Tokenizer(expression, backend)
+    tokens = tokenizer_.tokenize()
+    program = parser.Parser(tokens, backend).parse()
 
     analyzer_ = analyzer.Analyzer(backend=backend, backend_variables=inputs)
     analyzer_.analyze(program)

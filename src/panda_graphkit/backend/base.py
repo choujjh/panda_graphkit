@@ -162,29 +162,22 @@ class Backend(ABC):
         supported_operations_map: Dict mapping operation names to Operation
             objects for the operations this backend supports.
     """
-
-    supported_operations_map = {
-        "+": ops_math.ADD,
-        "-": ops_math.SUBTRACT,
-        "*": ops_math.MULTIPLY,
-        "/": ops_math.DIVIDE,
-        "**": ops_math.POWER,
-        "^": ops_math.POWER,
-        ops_math.SIN.name: ops_math.SIN,
-        ops_math.ACOS.name: ops_math.ACOS,
-        ops_math.COS.name: ops_math.COS,
-        ops_math.REMAP.name: ops_math.REMAP,
-        ops_math.DIST.name: ops_math.DIST,
-        ops_math.ADD.name: ops_math.ADD,
-        ops_math.SUM.name: ops_math.SUM,
-        ops_math.SUBTRACT.name: ops_math.SUBTRACT,
-        ops_math.MULTIPLY.name: ops_math.MULTIPLY,
-        ops_math.PRODUCT.name: ops_math.PRODUCT,
-        ops_math.DIVIDE.name: ops_math.DIVIDE,
-        ops_math.POWER.name: ops_math.POWER,
-        ops_math.VECTOR.name: ops_math.VECTOR,
-        ops_math.MATRIX.name: ops_math.MATRIX,
-    }
+    supported_operations = [
+        ops_math.SIN,
+        ops_math.ACOS,
+        ops_math.COS,
+        ops_math.REMAP,
+        ops_math.DIST,
+        ops_math.ADD,
+        ops_math.SUM,
+        ops_math.SUBTRACT,
+        ops_math.MULTIPLY,
+        ops_math.PRODUCT,
+        ops_math.DIVIDE,
+        ops_math.POWER,
+        ops_math.VECTOR,
+        ops_math.MATRIX,
+    ]
     optimize_operations = [
         BackendNodeOptimization(
             checked_ops=[ops_math.ADD, ops_math.SUM],
@@ -211,6 +204,12 @@ class Backend(ABC):
             num_elements=(16),
         ),
     }
+    def __init__(self):
+        super().__init__()
+        self.supported_operations_map = {
+            alias: op 
+            for op in self.supported_operations
+            for alias in op.aliases}
 
     @abstractmethod
     def resolve_attribute_type(

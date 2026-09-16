@@ -7,7 +7,9 @@ are lightweight dataclasses used by validation and dispatch logic.
 
 from __future__ import annotations
 from dataclasses import dataclass, field
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
+from types import MappingProxyType
+from ..utils import Associativity
 from ..core import types_is_compatable
 from . import attribute_types
 
@@ -167,10 +169,14 @@ class Operation:
     Attributes:
         name: Public name of the operation (e.g. 'sin').
         signatures: Tuple of `Signature` objects describing allowed inputs.
+        aliases: Names and symbols that resolve to this operation.
+        infix: Symbolic aliases mapped to (precedence, associativity).
     """
 
     name: str
     signatures: tuple[Signature, ...] = field(compare=False)
+    aliases: tuple[str, ...] = field(default=None)
+    infix: Mapping[str, tuple[int, Associativity]] = field(default_factory=dict, compare=False)
 
     def __repr__(self):
         """Return a concise representation containing name and signature count."""
@@ -183,9 +189,31 @@ class Operation:
             if not isinstance(curr_var, Iterable):
                 curr_var = [curr_var]
             object.__setattr__(self, "signatures", tuple(curr_var))
+        if not isinstance(self.aliases, tuple):
+            if self.aliases is None:
+                curr_var = []
+            else:
+                curr_var = self.aliases
+            if not isinstance(curr_var, Iterable):
+                curr_var = [curr_var]
+            object.__setattr__(self, "aliases", tuple(curr_var))
+        if self.name not in self.aliases:
+            curr_list = list(self.aliases)
+            curr_list.append(self.name)
+            object.__setattr__(self,"aliases", tuple(curr_list))
+        for alias, (precedence, associativity) in self.infix.items():
+            if alias not in self.aliases:
+                raise ValueError(f"Infix alias {alias!r} is not registered for {self.name!r}")
+            if not isinstance(precedence, int) or precedence < 0:
+                raise ValueError(f"Invalid precedence for {alias!r}: {precedence!r}")
+            if not isinstance(associativity, Associativity):
+                raise ValueError(f"Invalid associativity for {alias!r}: {associativity!r}")
+        object.__setattr__(self, "infix", MappingProxyType(dict(self.infix)))
 
     def replace(
-        self, name: str = None, signatures: tuple[Signature] = None
+        self, name: str = None, signatures: tuple[Signature] = None,
+        aliases: tuple[str, ...] = None,
+        infix: Mapping[str, tuple[int, Associativity]] = None,
     ) -> Operation:
         """Replaces fields and returns a new Operation
 
@@ -200,7 +228,11 @@ class Operation:
             name = self.name
         if signatures is None:
             signatures = self.signatures
-        return Operation(name, signatures)
+        if aliases is None:
+            aliases = self.aliases
+        if infix is None:
+            infix = self.infix
+        return Operation(name, signatures, aliases, infix)
 
     def without_signatures(self, *signatures) -> Operation:
         """Create Operation without certain signatures

@@ -11,6 +11,8 @@ assignment statements.
 
 from .tokenizer import TokenType, Token
 from . import ast
+from ..backend.base import Backend
+from ..utils import Associativity
 
 
 class Parser:
@@ -20,18 +22,15 @@ class Parser:
     `ast.Program` representing the top-level statements.
     """
 
-    PRECEDENCE = {
-        TokenType.PLUS: 10,
-        TokenType.MINUS: 10,
-        TokenType.STAR: 20,
-        TokenType.SLASH: 20,
-        TokenType.CARET: 30,
-        TokenType.POWER: 30,
-    }
-
-    def __init__(self, tokens: list[Token]):
-        """Initialize a parser with a token sequence."""
+    def __init__(self, tokens: list[Token], backend: Backend):
+        """Initialize a parser using the backend's infix operator metadata."""
         self.tokens = tokens
+        self.backend = backend
+        self.infix_operators = {
+            alias: operation.infix[alias]
+            for alias, operation in backend.supported_operations_map.items()
+            if alias in operation.infix
+        }
         self.token_len = len(tokens) if tokens is not None else 0
         self.current = 0
 
@@ -81,15 +80,24 @@ class Parser:
 
         while True:
             operator = self._peek()
-            precedence = self.PRECEDENCE.get(operator.type_, -1)
+            operator_info = (
+                self.infix_operators.get(operator.value)
+                if operator.type_ is TokenType.OPERATOR
+                else None
+            )
 
+            if operator_info is None:
+                break
+            precedence, associativity = operator_info
             if precedence < min_precedence:
                 break
 
             self._advance()
-            next_precedence = precedence + 1
-            if operator.type_ in [TokenType.CARET, TokenType.POWER]:
-                next_precedence = precedence
+            next_precedence = (
+                precedence
+                if associativity is Associativity.RIGHT
+                else precedence + 1
+            )
             right = self._expression(next_precedence)
             left = ast.BinaryOperation(operation=operator.value, left=left, right=right)
 
@@ -101,8 +109,12 @@ class Parser:
         Returns an `ast.UnaryOperation` if a leading plus/minus is
         present; otherwise returns the result of `_post_fix()`.
         """
-        if self._match(TokenType.PLUS) or self._match(TokenType.MINUS):
-            operator = self._previous()
+        if (
+            not self._at_end()
+            and self._peek().type_ is TokenType.OPERATOR
+            and self._peek().value in ("+", "-")
+        ):
+            operator = self._advance()
             operand = self._post_fix()
 
             return ast.UnaryOperation(operator=operator.value, operand=operand)

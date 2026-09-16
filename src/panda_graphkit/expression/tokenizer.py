@@ -11,6 +11,8 @@ of `Token` objects ending with an `EOF` token.
 from enum import Enum, auto
 from dataclasses import dataclass
 
+from ..backend.base import Backend
+
 
 class TokenType(Enum):
     """Enumeration of all token types produced by the tokenizer.
@@ -24,20 +26,15 @@ class TokenType(Enum):
     NUMBER = auto()
     STRING = auto()
 
-    # Operators
-    PLUS = auto()
-    MINUS = auto()
-    STAR = auto()
-    SLASH = auto()
-    CARET = auto()
-    EQUAL = auto()
-    POWER = auto()
+    # Operator
+    OPERATOR = auto()
 
     # Punctuation
     LEFT_PAREN = auto()
     RIGHT_PAREN = auto()
     LEFT_SQR_BRACKET = auto()
     RIGHT_SQR_BRACKET = auto()
+    EQUAL = auto()
     COMMA = auto()
     SEMICOLON = auto()
     NEWLINE = auto()
@@ -46,15 +43,6 @@ class TokenType(Enum):
     EOF = auto()
 
 
-_OPERATORS = {
-    "+": TokenType.PLUS,
-    "-": TokenType.MINUS,
-    "*": TokenType.STAR,
-    "/": TokenType.SLASH,
-    "^": TokenType.CARET,
-    "**": TokenType.POWER,
-}
-_OPERATOR_START_STRING = "".join(set([char[0] for char in _OPERATORS]))
 _PUNCTUATION = {
     "(": TokenType.LEFT_PAREN,
     ")": TokenType.RIGHT_PAREN,
@@ -97,15 +85,23 @@ class Tokenizer:
             sequence is produced.
     """
 
-    def __init__(self, source):
+    def __init__(self, source, backend: Backend):
         """Initialize a tokenizer for the supplied source string."""
         self.source = source
+        self.backend = backend
+        self.operators = sorted(
+            (alias for alias in backend.supported_operations_map
+             if alias and not alias[0].isalnum() and alias[0] not in "|:_"),
+            key=len,
+            reverse=True,
+        )
+        self.operator_starts = {alias[0] for alias in self.operators}
         self.source_len = len(source) if source is not None else 0
         self.current = 0
         self.row = 0
         self.column = 0
 
-    def tokenize(self) -> list[TokenType]:
+    def tokenize(self) -> list[Token]:
         """Tokenize the entire source and return a list of `Token`.
 
         The returned list always ends with an `EOF` token.
@@ -142,7 +138,7 @@ class Tokenizer:
             self.column = 0
             return Token(type_=TokenType.NEWLINE, value="")
 
-        if char in _OPERATOR_START_STRING:
+        if char in self.operator_starts:
             return self._operator(char)
 
         if char in _PUNCTUATION:
@@ -203,16 +199,14 @@ class Tokenizer:
     def _operator(self, char):
         """Return an operator token starting with `char`.
 
-        Handles multi-character operators such as `**` for power.
+        Matches the longest symbolic alias registered by the backend.
         Raises `ValueError` for unknown operator starts.
         """
-        if char == "*":
-            if self._match("*"):
-                return Token(TokenType.POWER, "**")
-            return Token(TokenType.STAR, "*")
-
-        if char in _OPERATORS:
-            return Token(_OPERATORS[char], char)
+        for alias in self.operators:
+            if alias[0] == char and self.source.startswith(alias[1:], self.current):
+                for _ in alias[1:]:
+                    self._advance()
+                return Token(TokenType.OPERATOR, alias)
 
         self._raise_value_error(char)
 

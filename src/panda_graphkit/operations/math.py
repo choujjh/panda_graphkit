@@ -7,6 +7,7 @@ by downstream validation and dispatch.
 """
 
 from ..core import Operation
+from ..utils import Associativity
 from ..signatures import math as sig_math
 
 __all__ = (
@@ -54,6 +55,8 @@ DIST = Operation(
 
 ADD = Operation(
     name="add",
+    aliases="+",
+    infix={"+": (10, Associativity.LEFT)},
     signatures=(
         sig_math.N_N_O_N_SIG.replace(commutative=True),
         sig_math.V_V_O_V_SIG.replace(commutative=True),
@@ -73,6 +76,8 @@ SUM = Operation(
 
 SUBTRACT = Operation(
     name="subtract",
+    aliases="-",
+    infix={"-": (10, Associativity.LEFT)},
     signatures=(
         sig_math.N_N_O_N_SIG,
         sig_math.V_V_O_V_SIG,
@@ -83,6 +88,8 @@ SUBTRACT = Operation(
 
 MULTIPLY = Operation(
     name="mult",
+    aliases="*",
+    infix={"*": (20, Associativity.LEFT)},
     signatures=(
         sig_math.N_N_O_N_SIG.replace(commutative=True),
         sig_math.V_V_O_V_SIG.replace(commutative=True),
@@ -104,6 +111,8 @@ PRODUCT = Operation(
 
 DIVIDE = Operation(
     name="div",
+    aliases="/",
+    infix={"/": (20, Associativity.LEFT)},
     signatures=(
         sig_math.N_N_O_N_SIG,
         sig_math.N_V_O_V_SIG,
@@ -114,6 +123,8 @@ DIVIDE = Operation(
 
 POWER = Operation(
     name="pow",
+    aliases=("**", "^"),
+    infix={"**": (30, Associativity.RIGHT), "^": (30, Associativity.RIGHT)},
     signatures=(
         sig_math.N_N_O_N_SIG,
         sig_math.V_V_O_V_SIG,

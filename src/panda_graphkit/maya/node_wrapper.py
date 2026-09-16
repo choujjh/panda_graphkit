@@ -523,6 +523,7 @@ def _snake_to_camel(snake_str):
 
 
 def kwarg_to_dict(**kwarg_dict):
+    """returns keyword arguments as a dictionary"""
     return kwarg_dict
 
 
