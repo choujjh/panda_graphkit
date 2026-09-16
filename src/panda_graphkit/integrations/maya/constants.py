@@ -1,6 +1,6 @@
-from ...graph.operations import math as ops_math
-from ...graph.backend.base import NodeMap, OperationMap
-from ...graph.signatures import math as sig_math
+from ...graph import NodeMap, OperationMap
+from ...graph import operations as ops_math
+from ...graph import signatures as sig_math
 
 __all__ = [
     "SIN",

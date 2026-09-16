@@ -3,8 +3,12 @@
 from importlib import import_module
 
 __all__ = [
-    "AttributeType", "Graph", "Operation", "Signature", "Parameter",
-    "Associativity", "Backend", "MockBackend", "ExpressionResult",
+    "Backend",
+    "NodeMap",
+    "OperationMap",
+    "BackendNodeOptimization",
+    "ConstructorOps",
+    "ExpressionResult",
     "build_expression",
 ]
 

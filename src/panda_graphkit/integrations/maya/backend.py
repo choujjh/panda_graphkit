@@ -15,9 +15,9 @@ from ...graph.core import (
     ConstNode,
     BackendNode,
 )
-from ...graph.operations import math as ops_math
-from ...graph.signatures import math as sig_math
-from ...graph.backend.base import Backend, NodeMap, OperationMap, BackendNodeOptimization
+from ...graph import Backend, NodeMap, OperationMap, BackendNodeOptimization
+from ...graph.operations import ADD, SUM, MULTIPLY, PRODUCT
+from ...graph.signatures import NUVV_O_V_SIG
 
 from ...maya import (
     create_node,
@@ -49,21 +49,21 @@ class MayaBackend(Backend):
     }
     optimize_operations = [
         BackendNodeOptimization(
-            checked_ops=[ops_math.ADD, ops_math.SUM],
-            operand=ops_math.SUM,
+            checked_ops=[ADD, SUM],
+            operand=SUM,
             identity_value=0,
         ),
         BackendNodeOptimization(
-            checked_ops=[ops_math.MULTIPLY, ops_math.PRODUCT],
-            operand=ops_math.PRODUCT.without_signatures(sig_math.NUVV_O_V_SIG),
+            checked_ops=[MULTIPLY, PRODUCT],
+            operand=PRODUCT.without_signatures(NUVV_O_V_SIG),
             identity_value=1,
         ),
     ]
 
     def __init__(self):
         super().__init__()
-        self.supported_operations_map[ops_math.PRODUCT.name] = (
-            ops_math.PRODUCT.without_signatures(sig_math.NUVV_O_V_SIG)
+        self.supported_operations_map[PRODUCT.name] = (
+            PRODUCT.without_signatures(NUVV_O_V_SIG)
         )
 
     def resolve_attribute_type(self, node, attributes):
