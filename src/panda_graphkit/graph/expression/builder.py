@@ -33,8 +33,9 @@ def build_expression(
         prefix: Prefix used when naming generated graph nodes.
         name: Name used for the generated expression network.
         backend: Backend used for type resolution and graph construction.
-        inputs: Named constants or live backend attributes. Binding conversion
-            is not implemented yet; nonempty inputs raise NotImplementedError.
+        inputs: Named constants, backend nodes, or live backend attributes.
+            Attribute names read their bound attribute in expressions and connect
+            into it when assigned. Constants and unbound names are local variables.
 
     Returns:
         An ExpressionResult containing the built graph, graph nodes, and variable ports.
@@ -47,7 +48,7 @@ def build_expression(
     analyzer_.analyze(program)
 
     compiler_ = compiler.Compiler(backend)
-    compiler_.bind_inputs(analyzer_.variables, prefix)
+    compiler_.bind_inputs(analyzer_.input_bindings, prefix)
     compiler_.compile(program, prefix, name)
     nodes, variables = backend.build_graph(compiler_.graph, compiler_.variables)
 

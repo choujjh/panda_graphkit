@@ -127,7 +127,7 @@ class Tokenizer:
         operators, and punctuation.
         """
         char = self._advance()
-        if char == ":" or char == "|" or char.isalpha():
+        if char in ":|_" or char.isalpha():
             return self._identifier()
 
         if char.isdigit():

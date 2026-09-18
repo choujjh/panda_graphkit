@@ -33,7 +33,7 @@ class Compiler:
         self.optimize_graph(prefix, name)
         self.graph.clean_names()
 
-    def bind_inputs(self, input_bindings: dict[str : ast.ASTNode], prefix=str):
+    def bind_inputs(self, input_bindings: dict[str, ast.ASTNode], prefix: str):
         """Convert analyzed input AST nodes into graph output ports."""
         for name, input_ast in input_bindings.items():
             if not isinstance(input_ast, (ast.Literal, ast.AttributeAccess)):
@@ -50,10 +50,12 @@ class Compiler:
         if isinstance(ast_node, ast.Assignment):
             if isinstance(ast_node.target, ast.AttributeAccess):
                 input_port = self._attribute_access_to_graph(
-                    ast_node.target, as_output_port=True
+                    ast_node.target, as_output_port=False
                 )
                 output_port = self.ast_to_graph(ast_node.value, prefix, name)
 
+                if input_port.connection is not None:
+                    self.graph.disconnect(input_port)
                 self.graph.connect(output_port, input_port)
                 return output_port
 
@@ -147,6 +149,10 @@ class Compiler:
             elif isinstance(attribute, ast.Identifier):
                 attributes.append(attribute.name)
         name = "".join([f"[{x}]" for x in attributes])
+
+        ports = node.outputs if as_output_port else node.inputs
+        if name in ports:
+            return ports[name]
 
         port = None
         if as_output_port:

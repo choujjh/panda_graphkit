@@ -108,3 +108,22 @@ exp_str = f"""
 maya_backend_ = MayaBackend()
 graph = build_expression(exp_str, "loc", "network", backend=maya_backend_)
 ```
+
+### Named expression inputs
+
+```python
+result = build_expression(
+    "result = speed * scale",
+    "loc",
+    "network",
+    backend=maya_backend_,
+    inputs={"speed": t1["tx"], "scale": 2, "result": t4["ty"]},
+)
+```
+
+Here `speed` reads `t1.tx`, and assigning `result` connects the computed value
+into `t4.ty`. Later reads of `result` still refer to `t4.ty`.
+Names bound to constants, and names absent from `inputs`, are local variables
+that can be reassigned. A node binding can be used as an attribute owner, such
+as `target.ty = speed`; assigning to the bare node name is not supported.
+Repeated assignments to the same backend attribute keep the last connection.

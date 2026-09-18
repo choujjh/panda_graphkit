@@ -385,7 +385,7 @@ class Node:
         """Create, register, and return a port of the requested type."""
         name = self.get_next_numeric_port_name(name)
         port_map = self.outputs
-        if port_type == InputPort:
+        if issubclass(port_type, InputPort):
             port_map = self.inputs
         port = port_type(name, type_, self)
         port_map[name] = port

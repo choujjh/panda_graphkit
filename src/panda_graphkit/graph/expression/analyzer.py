@@ -22,28 +22,37 @@ class Analyzer:
         variables: Dict mapping variable names to their AST nodes for lookup.
     """
 
-    def __init__(self, backend: base.Backend, backend_variables={}):
+    def __init__(self, backend: base.Backend, backend_variables=None):
         """Initialize the analyzer with a backend.
 
         Args:
             backend: The backend to use for resolving operations and attributes.
         """
         self.backend = backend
-        self.backend_variables = backend_variables
+        self.backend_variables = backend_variables or {}
         self.variables = {}
 
         self._initialize_variables()
+        self.input_bindings = dict(self.variables)
 
     def _initialize_variables(self) -> None:
         """Initalize Variable map"""
         for key, value in self.backend_variables.items():
             ref = self.backend.resolve_reference(value)
-            if ref == value:
+            if ref is value:
                 self.variables[key] = ast.Literal(value)
             else:
                 node = ast.Identifier(ref[0])
-                attrs = [ast.Identifier(x) for x in ref[1:]]
+                attrs = [
+                    ast.Literal(int(x)) if isinstance(x, int) or str(x).isdigit()
+                    else ast.Identifier(x)
+                    for x in ref[1:]
+                ]
                 self.variables[key] = ast.AttributeAccess(node=node, attributes=attrs)
+                if attrs:
+                    self.variables[key].type_ = self.backend.resolve_attribute_type(node, attrs)
+            if isinstance(self.variables[key], ast.Literal):
+                self.analyze_literal(self.variables[key])
 
     def analyze(self, node):
         """Analyze an AST node and assign type information.
@@ -73,8 +82,8 @@ class Analyzer:
         if isinstance(node, ast.Identifier):
             if node.name in self.variables:
                 if self.variables[node.name].type_ is None:
-                    var = self.analyze(self.variables[node.name])
-                    node.type_ = var
+                    self.analyze(self.variables[node.name])
+                    node.type_ = self.variables[node.name].type_
                 else:
                     node.type_ = self.variables[node.name].type_
                 return node.type_
@@ -133,6 +142,7 @@ class Analyzer:
 
         if node.type_ is None:
             raise TypeError(f"Unsupported literal type: {type(node.value).__name__}")
+        return node.type_
 
     def analyze_binary(self, node: ast.BinaryOperation):
         """Analyze a binary operation node.
@@ -211,8 +221,12 @@ class Analyzer:
         """
         if node.node.name in self.variables:
             var = node.node.name
+            if not isinstance(self.variables[var], ast.AttributeAccess):
+                raise TypeError(f"Variable {var!r} is not a backend reference")
             node.node = self.variables[var].node
             node.attributes = [*self.variables[var].attributes, *node.attributes]
+        if not node.attributes:
+            raise TypeError("A backend node input must be accessed through an attribute")
         type_ = self.backend.resolve_attribute_type(node.node, node.attributes)
         node.type_ = type_
         return node.type_
@@ -230,12 +244,19 @@ class Analyzer:
         self.analyze(node.value)
         if isinstance(node.target, ast.Identifier):
             target_name = node.target.name
-            self.variables[target_name] = node.value
-        if isinstance(node.target, ast.AttributeAccess):
-            type_ = self.backend.resolve_attribute_type(
-                node.target.node, node.target.attributes
-            )
-            node.target.type_ = type_
+            binding = self.input_bindings.get(target_name)
+            if isinstance(binding, ast.AttributeAccess):
+                if not binding.attributes:
+                    raise TypeError(f"Cannot assign to backend node {target_name!r}; select an attribute")
+                node.target = ast.AttributeAccess(
+                    node=binding.node, attributes=list(binding.attributes), type_=binding.type_
+                )
+            else:
+                self.variables[target_name] = node.value
+        elif isinstance(node.target, ast.AttributeAccess):
+            self.analyze_attribute_access(node.target)
+        else:
+            raise TypeError("Assignment target must be a variable or backend attribute")
 
         node.type_ = node.value.type_
 

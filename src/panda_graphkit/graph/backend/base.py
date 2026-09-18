@@ -228,7 +228,11 @@ class Backend(ABC):
 
     @abstractmethod
     def resolve_reference(self, value: Any) -> list[str] | Any:
-        """Gets specific package into an usable data for ast Node
+        """Return a backend path for a reference, or the original value unchanged.
+
+        Reference paths contain the node name followed by attribute names and
+        array indices. Non-reference values must be returned by identity so the
+        analyzer can distinguish constants from backend references.
 
         Args:
             value (Any):
