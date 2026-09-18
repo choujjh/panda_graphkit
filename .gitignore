@@ -1,3 +1,4 @@
 *.pyc
 TODO.md
 src/panda_graphkit/dev.py
+tests/test_input_bindings.py
