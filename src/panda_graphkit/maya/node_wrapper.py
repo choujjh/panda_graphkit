@@ -376,38 +376,43 @@ class Matrix(om2.MMatrix):
 class Vector(om2.MVector):
     """Vector inherited from om2.Vector"""
 
+    def _cast_return_type(self, return_obj):
+        if isinstance(return_obj, om2.MVector):
+            return Vector(return_obj)
+        return return_obj
+
     def __add__(self, other):
-        return Vector(super().__add__(other))
+        return self._cast_return_type(super().__add__(other))
 
     def __iadd__(self, other):
-        return Vector(super().__iadd__(other))
+        return self._cast_return_type(super().__iadd__(other))
 
     def __imul__(self, other):
-        return Vector(super().__imul__(other))
+        return self._cast_return_type(super().__imul__(other))
 
     def __isub__(self, other):
-        return Vector(super().__isub__(other))
+        return self._cast_return_type(super().__isub__(other))
 
     def __itruediv__(self, other):
-        return Vector(super().__itruediv__(other))
+        return self._cast_return_type(super().__itruediv__(other))
 
     def __mul__(self, other):
-        return Vector(super().__mul__(other))
+        return self._cast_return_type(super().__mul__(other))
 
     def __neg__(self):
-        return Vector(super().__neg__())
+        return self._cast_return_type(super().__neg__())
 
     def __radd__(self, other):
-        return Vector(super().__radd__(other))
+        return self._cast_return_type(super().__radd__(other))
 
     def __rmul__(self, other):
-        return Vector(super().__rmul__(other))
+        return self._cast_return_type(super().__rmul__(other))
 
     def __rsub__(self, other):
-        return Vector(super().__rsub__(other))
+        return self._cast_return_type(super().__rsub__(other))
 
     def __rtruediv__(self, other):
-        return Vector(super().__rtruediv__(other))
+        return self._cast_return_type(super().__rtruediv__(other))
 
     def __rxor__(self, other):
         """crosses the vector with another
@@ -418,13 +423,13 @@ class Vector(om2.MVector):
         Returns:
             Vector:
         """
-        return Vector(super().__rxor__(other))
+        return self._cast_return_type(super().__rxor__(other))
 
     def __sub__(self, other):
-        return Vector(super().__sub__(other))
+        return self._cast_return_type(super().__sub__(other))
 
     def __truediv__(self, other):
-        return Vector(super().__truediv__(other))
+        return self._cast_return_type(super().__truediv__(other))
 
     def __xor__(self, other):
         """crosses the vector with another
@@ -435,7 +440,7 @@ class Vector(om2.MVector):
         Returns:
             Vector:
         """
-        return Vector(super().__xor__(other))
+        return self._cast_return_type(super().__xor__(other))
 
 
 def wrap_node(node, **attr_data_dict):
@@ -522,7 +527,7 @@ def _snake_to_camel(snake_str):
     return camel_case_str
 
 
-def kwarg_to_dict(**kwarg_dict):
+def kwargs_to_dict(**kwarg_dict):
     """returns keyword arguments as a dictionary"""
     return kwarg_dict
 
@@ -564,6 +569,31 @@ class AttrTypes(Enum):
     nurbsSurface = {"dataType": "nurbsSurface"}
     short = {"attributeType": "short"}
     string = {"dataType": "string"}
+
+
+def double3_children(name: str, suffixes: str = "XYZ", **add_attr_kwargs) -> dict[str, AttrTypes]:
+    """Build three double children for a double3 in ``Node.add_attrs``.
+
+    Child names append each suffix to ``name``, preserving letter case.
+    ``suffixes`` must contain exactly three distinct ASCII letters.
+
+    Examples:
+        node.add_attrs(offset=double3_children("offset"))
+        node.add_attrs(color=double3_children("color", "RGB"))
+    """
+    if not isinstance(suffixes, str):
+        raise TypeError("suffixes must be a string")
+    if (
+        len(suffixes) != 3
+        or not suffixes.isascii()
+        or not suffixes.isalpha()
+        or len(set(suffixes)) != 3
+    ):
+        raise ValueError("suffixes must contain exactly three distinct ASCII letters")
+    child_dict = {f"{name}{suffix}": AttrTypes.double for suffix in suffixes}
+    child_dict.update(**add_attr_kwargs)
+    return child_dict
+
 
 
 class Node:
