@@ -15,6 +15,13 @@ __all__ = (
     "COS",
     "REMAP",
     "DIST",
+    "DOT",
+    "CROSS",
+    "POINT_MULTIPLY",
+    "VECTOR_MULTIPLY",
+    "NORMALIZE",
+    "TRANSLATE_MATRIX",
+    "MATRIX_TO_TRANSLATE",
     "ADD",
     "SUM",
     "SUBTRACT",
@@ -52,6 +59,31 @@ DIST = Operation(
         sig_math.M_M_O_N_SIG,
         sig_math.V_V_O_N_SIG,
     ),
+)
+
+DOT = Operation(
+    name="dot",
+    signatures=sig_math.V_V_O_N_SIG.replace(commutative=True),
+)
+
+CROSS = Operation(
+    name="cross",
+    signatures=sig_math.V_V_O_V_SIG,
+)
+
+POINT_MULTIPLY = Operation(
+    name="point_mult",
+    signatures=sig_math.M_V_O_V_SIG,
+)
+
+VECTOR_MULTIPLY = Operation(
+    name="vector_mult",
+    signatures=sig_math.M_V_O_V_SIG,
+)
+
+NORMALIZE = Operation(
+    name="normalize",
+    signatures=sig_math.V_O_V_SIG,
 )
 
 ADD = Operation(
@@ -145,4 +177,16 @@ VECTOR = Operation(
 MATRIX = Operation(
     name="matrix",
     signatures=sig_math.N16_O_M_SIG,
+)
+
+
+TRANSLATE_MATRIX = Operation(
+    name="translateMatrix",
+    signatures=sig_math.V_O_M_SIG,
+)
+
+
+MATRIX_TO_TRANSLATE = Operation(
+    name="matrixToTranslate",
+    signatures=sig_math.M_O_V_SIG,
 )

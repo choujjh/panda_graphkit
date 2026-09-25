@@ -3,6 +3,7 @@
 from collections.abc import Iterable
 import re
 from typing import Any
+import maya.cmds as cmds
 from ...utils import nested_to_dict
 from ...graph.core import (
     FLOAT,
@@ -16,7 +17,7 @@ from ...graph.core import (
     BackendNode,
 )
 from ...graph import Backend, NodeMap, OperationMap, BackendNodeOptimization
-from ...graph.operations import ADD, SUM, MULTIPLY, PRODUCT
+from ...graph.operations import ADD, SUM, MULTIPLY, PRODUCT, VECTOR
 from ...graph.signatures import NUVV_O_V_SIG
 
 from ...maya import (
@@ -121,8 +122,12 @@ class MayaBackend(Backend):
             Mapping of node names to the created Maya node and its node map.
         """
         node_dict = {}
+        available_node_types = set(cmds.allNodeTypes())
         for node in graph.get_nodes():
             if isinstance(node, ConstNode):
+                continue
+            if node.operation == VECTOR:
+                # Vector constructors are wired component by component below.
                 continue
             if isinstance(node, BackendNode):
                 node_dict[node.name] = {"node": wrap_node(node.name), "map": None}
@@ -136,6 +141,8 @@ class MayaBackend(Backend):
                     )
                 maya_ops = maya_sig_map[node_sig]
                 for node_map in maya_ops:
+                    if node_map.mapped_node_type not in available_node_types:
+                        continue
                     maya_node = create_node(
                         node_map.mapped_node_type, node.name, **node_map.node_init
                     )
@@ -144,6 +151,10 @@ class MayaBackend(Backend):
                         continue
                     node_dict[node.name] = {"node": maya_node, "map": node_map}
                     break
+                else:
+                    raise RuntimeError(
+                        f"No available Maya node for operation {node.operation.name}"
+                    )
             else:
                 raise KeyError(f"node {node} not created")
 
@@ -187,6 +198,14 @@ class MayaBackend(Backend):
                 continue
             source_attr = attr_list[0]
             dest_attr = attr_list[1]
+
+            # One vector input can map to independent scalar matrix cells.
+            if isinstance(dest_attr, list):
+                components = list(source_attr)
+                for index, dest_component in enumerate(dest_attr):
+                    value = components[index] if index < len(components) else 0.0
+                    dest_component.set_connect(value)
+                continue
 
             # Connectin source and attribute
             # if source_attr returns a list
@@ -245,7 +264,7 @@ class MayaBackend(Backend):
 
         return ret_variables
 
-    def _get_attr(self, port: Port, maya_node: MNode, node_map: NodeMap) -> MAttr:
+    def _get_attr(self, port: Port, maya_node: MNode, node_map: NodeMap) -> MAttr | list[MAttr]:
         """Gets attribute from mapped maya node
 
         Args:
@@ -264,6 +283,8 @@ class MayaBackend(Backend):
             attrs = port.attribute_list
         else:
             attrs = node_map.get_backend_attr_name(port)
+        if len(attrs) == 1 and isinstance(attrs[0], tuple):
+            return [maya_node[name] for name in attrs[0]]
         curr_attr = maya_node
         for attr in attrs:
             curr_attr = curr_attr[attr]

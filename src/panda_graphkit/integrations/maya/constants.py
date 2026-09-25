@@ -8,6 +8,13 @@ __all__ = [
     "COS",
     "REMAP",
     "DIST",
+    "DOT",
+    "CROSS",
+    "POINT_MULTIPLY",
+    "VECTOR_MULTIPLY",
+    "NORMALIZE",
+    "TRANSLATE_MATRIX",
+    "MATRIX_TO_TRANSLATE",
     "ADD",
     "SUM",
     "SUBTRACT",
@@ -98,6 +105,92 @@ DIST = OperationMap(
             output_attributes=("distance",),
         ),
     ]
+)
+DOT = OperationMap(
+    operation=ops_math.DOT,
+    node_maps=[
+        NodeMap(
+            operation_name=ops_math.DOT.name,
+            signature=sig_math.V_V_O_N_SIG,
+            mapped_node_type="dotProduct",
+            input_attributes=("input1", "input2"),
+            output_attributes=("output",),
+        ),
+        NodeMap(
+            operation_name=ops_math.DOT.name,
+            signature=sig_math.V_V_O_N_SIG,
+            mapped_node_type="vectorProduct",
+            input_attributes=("input1", "input2"),
+            output_attributes=("outputX",),
+            node_init={"operation": 1, "normalizeOutput": False},
+        ),
+    ],
+)
+CROSS = OperationMap(
+    operation=ops_math.CROSS,
+    node_maps=[
+        NodeMap(
+            operation_name=ops_math.CROSS.name,
+            signature=sig_math.V_V_O_V_SIG,
+            mapped_node_type="crossProduct",
+            input_attributes=("input1", "input2"),
+            output_attributes=("output",),
+        ),
+        NodeMap(
+            operation_name=ops_math.CROSS.name,
+            signature=sig_math.V_V_O_V_SIG,
+            mapped_node_type="vectorProduct",
+            input_attributes=("input1", "input2"),
+            output_attributes=("output",),
+            node_init={"operation": 2, "normalizeOutput": False},
+        ),
+    ],
+)
+POINT_MULTIPLY = OperationMap(
+    operation=ops_math.POINT_MULTIPLY,
+    node_maps=[
+        NodeMap(
+            operation_name=ops_math.POINT_MULTIPLY.name,
+            signature=sig_math.M_V_O_V_SIG,
+            mapped_node_type="pointMatrixMult",
+            input_attributes=("inMatrix", "inPoint"),
+            output_attributes=("output",),
+            node_init={"vectorMultiply": False},
+        ),
+    ],
+)
+VECTOR_MULTIPLY = OperationMap(
+    operation=ops_math.VECTOR_MULTIPLY,
+    node_maps=[
+        NodeMap(
+            operation_name=ops_math.VECTOR_MULTIPLY.name,
+            signature=sig_math.M_V_O_V_SIG,
+            mapped_node_type="pointMatrixMult",
+            input_attributes=("inMatrix", "inPoint"),
+            output_attributes=("output",),
+            node_init={"vectorMultiply": True},
+        ),
+    ],
+)
+NORMALIZE = OperationMap(
+    operation=ops_math.NORMALIZE,
+    node_maps=[
+        NodeMap(
+            operation_name=ops_math.NORMALIZE.name,
+            signature=sig_math.V_O_V_SIG,
+            mapped_node_type="normalize",
+            input_attributes=("input",),
+            output_attributes=("output",),
+        ),
+        NodeMap(
+            operation_name=ops_math.NORMALIZE.name,
+            signature=sig_math.V_O_V_SIG,
+            mapped_node_type="vectorProduct",
+            input_attributes=("input1",),
+            output_attributes=("output",),
+            node_init={"operation": 0, "normalizeOutput": True},
+        ),
+    ],
 )
 ADD = OperationMap(
     operation=ops_math.ADD,
@@ -275,6 +368,7 @@ MULTIPLY = OperationMap(
             mapped_node_type="pointMatrixMult",
             input_attributes=("inMatrix", "inPoint"),
             output_attributes=("output",),
+            node_init={"vectorMultiply": True},
         ),
     ],
 )
@@ -363,6 +457,43 @@ MATRIX = OperationMap(
             mapped_node_type="fourByFourMatrix",
             input_attributes=tuple(f"in{index // 4}{index % 4}" for index in range(16)),
             output_attributes=("output",),
+        ),
+    ],
+)
+
+
+TRANSLATE_MATRIX = OperationMap(
+    operation=ops_math.TRANSLATE_MATRIX,
+    node_maps=[
+        NodeMap(
+            operation_name=ops_math.TRANSLATE_MATRIX.name,
+            signature=sig_math.V_O_M_SIG,
+            mapped_node_type="fourByFourMatrix",
+            input_attributes=(("in30", "in31", "in32"),),
+            output_attributes=("output",),
+        ),
+    ],
+)
+
+
+MATRIX_TO_TRANSLATE = OperationMap(
+    operation=ops_math.MATRIX_TO_TRANSLATE,
+    node_maps=[
+        NodeMap(
+            operation_name=ops_math.MATRIX_TO_TRANSLATE.name,
+            signature=sig_math.M_O_V_SIG,
+            mapped_node_type="rowFromMatrix",
+            input_attributes=("matrix",),
+            output_attributes=(("outputX", "outputY", "outputZ"),),
+            node_init={"input": 3},
+        ),
+        NodeMap(
+            operation_name=ops_math.MATRIX_TO_TRANSLATE.name,
+            signature=sig_math.M_O_V_SIG,
+            mapped_node_type="pointMatrixMult",
+            input_attributes=("inMatrix",),
+            output_attributes=("output",),
+            node_init={"inPoint": (0, 0, 0), "vectorMultiply": False},
         ),
     ],
 )

@@ -10,9 +10,10 @@ from .node_wrapper import (
     create_node,
     make_len,
     exists,
-    kwarg_to_dict,
+    kwargs_to_dict,
     delete_node,
     AttrTypes,
+    double3_children,
 )
 
 __all__ = [
@@ -20,7 +21,7 @@ __all__ = [
     "create_node",
     "make_len",
     "exists",
-    "kwarg_to_dict",
+    "kwargs_to_dict",
     "delete_node",
     "Node",
     "Container",
@@ -28,4 +29,5 @@ __all__ = [
     "Matrix",
     "Vector",
     "AttrTypes",
+    "double3_children",
 ]

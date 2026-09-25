@@ -34,6 +34,9 @@ __all__ = [
     "N16_O_M_SIG",
     "M_M_O_N_SIG",
     "V_V_O_N_SIG",
+    "V_O_V_SIG",
+    "V_O_M_SIG",
+    "M_O_V_SIG",
 ]
 
 
@@ -169,4 +172,18 @@ V_V_O_N_SIG = Signature(
         Parameter("input2", VECTOR)
     ),
     outputs=Parameter("output", NUMBER)
+)
+
+V_O_V_SIG = Signature(
+    inputs=Parameter("value", VECTOR), outputs=Parameter("output", VECTOR)
+)
+
+
+V_O_M_SIG = Signature(
+    inputs=Parameter("value", VECTOR), outputs=Parameter("output", MATRIX4)
+)
+
+
+M_O_V_SIG = Signature(
+    inputs=Parameter("value", MATRIX4), outputs=Parameter("output", VECTOR)
 )

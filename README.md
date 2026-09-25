@@ -111,6 +111,36 @@ graph = build_expression(exp_str, "loc", "network", backend=maya_backend_)
 
 ### Named expression inputs
 
+Vector products can be used in expressions:
+
+```python
+result = build_expression(
+    "alignment = dot(a, b); normal = cross(a, b)",
+    "vectors",
+    "network",
+    backend=maya_backend_,
+    inputs={"a": t1["translate"], "b": t2["translate"]},
+)
+```
+
+`dot(a, b)` returns a scalar; `cross(a, b)` returns a vector using the
+right-hand rule. Maya computes these from the XYZ components without
+normalization. Reversing the cross product's arguments reverses its direction.
+
+Use `point_mult(matrix, point)` to transform a position including translation,
+`vector_mult(matrix, vector)` to transform a direction without translation,
+and `normalize(vector)` to produce a unit-length direction:
+
+```text
+position = point_mult(parent.worldMatrix[0], source.translate)
+direction = vector_mult(parent.worldMatrix[0], source.translate)
+unit_direction = normalize(direction)
+```
+
+These operations return vectors. In Maya they use XYZ components; the existing
+`matrix * vector` expression retains its point-transform behavior. Normalize
+nonzero vectors; zero-length handling is determined by the backend.
+
 ```python
 result = build_expression(
     "result = speed * scale",

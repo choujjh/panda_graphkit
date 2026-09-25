@@ -14,6 +14,6 @@ def nested_to_dict(data, indexes=(), depth=0, max_depth=300):
 
     return result
 
-def kwarg_to_dict(**kwarg_dict):
+def kwargs_to_dict(**kwarg_dict):
     """returns keyword arguments as a dictionary"""
     return kwarg_dict

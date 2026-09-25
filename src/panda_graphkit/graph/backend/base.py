@@ -42,8 +42,9 @@ class NodeMap:
     operation_name: str
     signature: Signature
     mapped_node_type: str
-    input_attributes: tuple[str]
-    output_attributes: tuple[str]
+    # A nested tuple maps one vector port to separate scalar attributes.
+    input_attributes: tuple[str | tuple[str, ...], ...]
+    output_attributes: tuple[str | tuple[str, ...], ...]
     invert_input_indicies: bool = False
     node_init: dict[str:Any] = field(default_factory=dict)
 
@@ -168,6 +169,13 @@ class Backend(ABC):
         ops_math.COS,
         ops_math.REMAP,
         ops_math.DIST,
+        ops_math.DOT,
+        ops_math.CROSS,
+        ops_math.POINT_MULTIPLY,
+        ops_math.VECTOR_MULTIPLY,
+        ops_math.NORMALIZE,
+        ops_math.TRANSLATE_MATRIX,
+        ops_math.MATRIX_TO_TRANSLATE,
         ops_math.ADD,
         ops_math.SUM,
         ops_math.SUBTRACT,
