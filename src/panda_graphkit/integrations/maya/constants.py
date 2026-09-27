@@ -13,6 +13,8 @@ __all__ = [
     "POINT_MULTIPLY",
     "VECTOR_MULTIPLY",
     "NORMALIZE",
+    "LENGTH",
+    "CLAMP",
     "TRANSLATE_MATRIX",
     "MATRIX_TO_TRANSLATE",
     "ADD",
@@ -189,6 +191,30 @@ NORMALIZE = OperationMap(
             input_attributes=("input1",),
             output_attributes=("output",),
             node_init={"operation": 0, "normalizeOutput": True},
+        ),
+    ],
+)
+LENGTH = OperationMap(
+    operation=ops_math.LENGTH,
+    node_maps=[
+        NodeMap(
+            operation_name=ops_math.LENGTH.name,
+            signature=sig_math.V_O_N_SIG,
+            mapped_node_type="length",
+            input_attributes=("input",),
+            output_attributes=("output",),
+        ),
+    ],
+)
+CLAMP = OperationMap(
+    operation=ops_math.CLAMP,
+    node_maps=[
+        NodeMap(
+            operation_name=ops_math.CLAMP.name,
+            signature=sig_math.N_N_N_O_N_SIG,
+            mapped_node_type="clampRange",
+            input_attributes=("input", "minimum", "maximum"),
+            output_attributes=("outputR",),
         ),
     ],
 )

@@ -17,6 +17,8 @@ from ..core import Signature, Parameter, NUMBER, FLOAT, VECTOR, MATRIX4
 
 __all__ = [
     "N_O_F_SIG",
+    "N_N_N_O_N_SIG",
+    "V_O_N_SIG",
     "N5_O_N_SIG",
     "N_N_O_N_SIG",
     "V_V_O_V_SIG",
@@ -42,6 +44,19 @@ __all__ = [
 
 N_O_F_SIG = Signature(
     inputs=Parameter("value", NUMBER), outputs=Parameter("output", FLOAT)
+)
+
+N_N_N_O_N_SIG = Signature(
+    inputs=(
+        Parameter("value1", NUMBER),
+        Parameter("value2", NUMBER),
+        Parameter("value3", NUMBER),
+    ),
+    outputs=Parameter("output", NUMBER),
+)
+
+V_O_N_SIG = Signature(
+    inputs=Parameter("value", VECTOR), outputs=Parameter("output", NUMBER)
 )
 
 N5_O_N_SIG = Signature(

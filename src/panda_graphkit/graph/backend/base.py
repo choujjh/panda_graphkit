@@ -174,6 +174,8 @@ class Backend(ABC):
         ops_math.POINT_MULTIPLY,
         ops_math.VECTOR_MULTIPLY,
         ops_math.NORMALIZE,
+        ops_math.LENGTH,
+        ops_math.CLAMP,
         ops_math.TRANSLATE_MATRIX,
         ops_math.MATRIX_TO_TRANSLATE,
         ops_math.ADD,

@@ -20,6 +20,8 @@ __all__ = (
     "POINT_MULTIPLY",
     "VECTOR_MULTIPLY",
     "NORMALIZE",
+    "LENGTH",
+    "CLAMP",
     "TRANSLATE_MATRIX",
     "MATRIX_TO_TRANSLATE",
     "ADD",
@@ -84,6 +86,16 @@ VECTOR_MULTIPLY = Operation(
 NORMALIZE = Operation(
     name="normalize",
     signatures=sig_math.V_O_V_SIG,
+)
+
+LENGTH = Operation(
+    name="length",
+    signatures=sig_math.V_O_N_SIG,
+)
+
+CLAMP = Operation(
+    name="clamp",
+    signatures=sig_math.N_N_N_O_N_SIG.replace_names("value", "min", "max", "output"),
 )
 
 ADD = Operation(

@@ -435,6 +435,13 @@ class Compiler:
                 self.graph.connect(new_const.output_port, input_port)
                 continue
 
+            # Only fold operations with an implemented constant evaluator.
+            # Other functions must retain each positional argument.
+            if node.operation not in (
+                ops_math.ADD, ops_math.SUM, ops_math.MULTIPLY, ops_math.PRODUCT
+            ):
+                continue
+
             for cluster in input_const_connections:
                 changed = True
                 first_connection = cluster[0]
