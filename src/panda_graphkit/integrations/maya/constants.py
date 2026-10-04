@@ -214,7 +214,7 @@ CLAMP = OperationMap(
             signature=sig_math.N_N_N_O_N_SIG,
             mapped_node_type="clampRange",
             input_attributes=("input", "minimum", "maximum"),
-            output_attributes=("outputR",),
+            output_attributes=("output",),
         ),
     ],
 )

@@ -758,7 +758,7 @@ class Node:
                         args_dict["type_"] = type_val
                     # get compound type
                     if child_dict != {} and "type_" not in args_dict.keys():
-                        if any(
+                        if all(
                             child_value is AttrTypes.double or child_value == "double"
                             for child_value in child_dict.values()
                         ):

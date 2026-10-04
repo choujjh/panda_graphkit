@@ -32,7 +32,7 @@ class Parameter:
         min_count: Minimum number of values when `variadict` is True.
     """
 
-    name: str
+    name: str = field(compare=False)
     types_: tuple[attribute_types.AttributeType]
     variadict: bool = False
     min_count: int = 1

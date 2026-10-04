@@ -95,7 +95,7 @@ LENGTH = Operation(
 
 CLAMP = Operation(
     name="clamp",
-    signatures=sig_math.N_N_N_O_N_SIG.replace_names("value", "min", "max", "output"),
+    signatures=sig_math.N_N_N_O_N_SIG.replace_names("input", "min", "max", "output"),
 )
 
 ADD = Operation(
