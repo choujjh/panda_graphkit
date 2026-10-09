@@ -1,3 +1,5 @@
+from dataclasses import dataclass, field as dataclass_field
+
 from .node_wrapper import Attr
 
 import maya.cmds as cmds
@@ -5,9 +7,28 @@ from PySide2 import QtWidgets
 from shiboken2 import wrapInstance
 import maya.OpenMayaUI as omui
 
+
 import sys
 
 import re
+
+
+@dataclass
+class AttributeWidget:
+    """Attribute editor controls. Add .widget to a Qt layout.
+
+    Leaf editors expose .field; containers expose .children in display order.
+    Array editors also expose .add_button and update .children when adding rows.
+    """
+
+    attribute: Attr
+    widget: QtWidgets.QWidget
+    layout: QtWidgets.QLayout
+    label: QtWidgets.QLabel | None = None
+    field: QtWidgets.QWidget | None = None
+    add_button: QtWidgets.QPushButton | None = None
+    children: list["AttributeWidget"] = dataclass_field(default_factory=list)
+
 
 class PandaUIBaseClass(QtWidgets.QDialog):
     """Maya-parented dialog that builds widgets, layout, then connections.
@@ -69,14 +90,18 @@ def create_attribute_widget(
     parent:QtWidgets.QWidget=None,
     parent_attr_name:str=None,
     is_connected: bool = False,
-) -> QtWidgets.QWidget:
+) -> AttributeWidget:
+    """Return the editor's outer widget, controls, and recursive child results."""
     displayed_indices = set()
 
     def add_to_array(child_layout:QtWidgets.QHBoxLayout):
         """Append a pending element editor immediately before the + button"""
         next_index_attr = attribute.next_index_attr()
-        child_widget = create_attribute_widget(next_index_attr)
-        child_layout.insertWidget(child_layout.count() - 1, child_widget)
+        child_editor = create_attribute_widget(
+            next_index_attr, widget, parent_attr_name, is_connected
+        )
+        child_layout.insertWidget(child_layout.count() - 1, child_editor.widget)
+        result.children.append(child_editor)
 
     def write_value(value):
         attribute.set(value)
@@ -107,13 +132,19 @@ def create_attribute_widget(
         parent_layout.setContentsMargins(0, 0, 0, 0)
         child_layout = QtWidgets.QHBoxLayout() if horizontal else QtWidgets.QVBoxLayout()
         child_layout.setContentsMargins(15, 0, 0, 0)
+        result = AttributeWidget(
+            attribute=attribute, widget=widget, layout=parent_layout,
+            label=parent_label,
+        )
 
         if horizontal:
             parent_attr_name = attribute_name
         for child_attr in attribute:
-            child_layout.addWidget(
-                create_attribute_widget(child_attr, None, parent_attr_name, is_connected)
+            child_editor = create_attribute_widget(
+                child_attr, widget, parent_attr_name, is_connected
             )
+            child_layout.addWidget(child_editor.widget)
+            result.children.append(child_editor)
             if attribute.plug.isArray:
                 displayed_indices.add(child_attr.index)
 
@@ -121,6 +152,7 @@ def create_attribute_widget(
         parent_layout.addLayout(child_layout)
         if attribute.plug.isArray:
             child_add_btn = QtWidgets.QPushButton("+")
+            result.add_button = child_add_btn
             child_add_btn.setToolTip("Add an element row; write its value to save it in Maya.")
             child_add_btn.clicked.connect(lambda checked=False: add_to_array(child_layout))
             child_form_layout = QtWidgets.QFormLayout()
@@ -131,7 +163,7 @@ def create_attribute_widget(
             child_layout.addLayout(child_form_layout)
 
         widget.setLayout(parent_layout)
-        return widget
+        return result
 
     attribute_value = attribute.value
     supported_types = [
@@ -205,4 +237,14 @@ def create_attribute_widget(
     layout.addRow(form_name, field_widget)
     
     widget.setEnabled(bool(cmds.getAttr(str(attribute), settable=True)))
-    return widget
+    return AttributeWidget(
+        attribute=attribute, widget=widget, layout=layout,
+        label=layout.labelForField(field_widget), field=field_widget,
+    )
+
+def create_separator():
+    separator = QtWidgets.QFrame()
+    separator.setFrameShape(QtWidgets.QFrame.HLine)
+    separator.setFrameShadow(QtWidgets.QFrame.Sunken)
+
+    return separator

@@ -570,6 +570,20 @@ class AttrTypes(Enum):
     short = {"attributeType": "short"}
     string = {"dataType": "string"}
 
+class KeyableAttrs(Enum):
+    t = "t"
+    tx = "tx"
+    ty = "ty"
+    tz = "tz"
+    r = "r"
+    rx = "rx"
+    ry = "ry"
+    rz = "rz"
+    s = "s"
+    sx = "sx"
+    sy = "sy"
+    sz = "sz"
+    visibility = "visibility"
 
 def double3_children(name: str, suffixes: str = "XYZ", **add_attr_kwargs) -> dict[str, AttrTypes]:
     """Build three double children for a double3 in ``Node.add_attrs``.
@@ -913,8 +927,8 @@ class Node:
         connections = [
             x
             for x in connections
-            if x[0].node.node_type != "hyperLayout"
-            and x[1].node.node_type != "hyperLayout"
+            if x[0].node.type_ != "hyperLayout"
+            and x[1].node.type_ != "hyperLayout"
         ]
         return connections
 
@@ -1092,6 +1106,17 @@ class Node:
 
         self[attr_name].set_connect(attr_data, set_when_data_is_attr)
 
+    def lock_hide_attr(self, *attrs, lock=True, hide=True):
+        """Locks and hides attributes on node"""
+        for attr in attrs:
+            if isinstance(attr, KeyableAttrs):
+                attr = attr.value
+            if not isinstance(attr, str):
+                raise ValueError(f"attr must be of type KeaybleAttr or str. attr {attr} is of type {type(attr)}")
+            attr = self[attr]
+            attr.set_locked(lock)
+            attr.set_keyable(not hide)
+            
     # operator overloads
     def __str__(self):
         """String representation of node. returns self.full_name
@@ -1885,6 +1910,10 @@ class Attr:
             keyable (bool):
         """
         cmds.setAttr(str(self), edit=True, keyable=keyable)
+        if self.has_children():
+            for child in self:
+                child.set_keyable(keyable)
+
 
     def is_keyable(self):
         """Returns if attribute is keyable

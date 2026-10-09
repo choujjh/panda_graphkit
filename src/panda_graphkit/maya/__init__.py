@@ -13,13 +13,16 @@ from .node_wrapper import (
     kwargs_to_dict,
     delete_node,
     AttrTypes,
+    KeyableAttrs,
     double3_children,
 )
 from .ui import (
+    AttributeWidget,
     PandaUIBaseClass,
     maya_main_window,
     create_attribute_widget,
     run_window,
+    create_separator,
 )
 
 __all__ = [
@@ -35,9 +38,12 @@ __all__ = [
     "Matrix",
     "Vector",
     "AttrTypes",
+    "KeyableAttrs",
     "double3_children",
     "maya_main_window",
     "PandaUIBaseClass",
     "create_attribute_widget",
+    "AttributeWidget",
     "run_window",
+    "create_separator",
 ]
