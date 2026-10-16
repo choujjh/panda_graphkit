@@ -1,6 +1,8 @@
+"""PySide2 Maya dialogs and recursive attribute-editor widgets."""
+
 from dataclasses import dataclass, field as dataclass_field
 
-from .node_wrapper import Attr
+from .node_wrapper import Attr, wrap_node
 
 import maya.cmds as cmds
 from PySide2 import QtWidgets
@@ -31,14 +33,28 @@ class AttributeWidget:
 
 
 class PandaUIBaseClass(QtWidgets.QDialog):
-    """Maya-parented dialog that builds widgets, layout, then connections.
+    """Maya-parented dialog with optional managed script jobs.
 
-    Subclasses must implement all three creation methods. Initialize any
-    state they need before calling this constructor.
-    """
+    Subclasses must implement create_widget(), create_layout(), and
+    create_connections(), called in that order during construction. Set
+    state needed by those hooks before calling super().__init__().
+
+    Optionally override create_script_jobs() and use add_script_job().
+    The hook runs on first show and after reopening a closed dialog.
+    Closing, accepting, rejecting, or destroying removes tracked jobs.
+    Hiding alone leaves jobs active."""
 
     def __init__(self, name: str, parent=None, width:float=None, height:float=None):
+        """Build the dialog using name as its object name and window title.
+
+        parent defaults to the Maya main window. Resize only if both width
+        and height are supplied; use dimensions accepted by Qt.resize()."""
         super().__init__(maya_main_window() if parent is None else parent)
+        self._script_jobs = set()
+        self._script_jobs_active = False
+        # Capture the registry, not self: destruction may outlive the wrapper.
+        jobs = self._script_jobs
+        self.destroyed.connect(lambda *_: _clear_script_jobs(jobs))
         self.setObjectName(name)
         self.setWindowTitle(name)
         if width is not None and height is not None:
@@ -59,10 +75,80 @@ class PandaUIBaseClass(QtWidgets.QDialog):
         """Connect widget signals to their handlers."""
         raise NotImplementedError("Subclasses must implement create_connections().")
 
+    def get_selection(self):
+        """Return current selection as specialized node wrappers."""
+        return [wrap_node(node) for node in cmds.ls(selection=True, long=True)]
+
+    def create_script_jobs(self):
+        """Optional hook for registering listeners through add_script_job().
+
+        Does nothing by default. Runs on first show and after a completed
+        close, accept, or reject. An override of showEvent must call super().
+
+        Example:
+            self.add_script_job(event=["SelectionChanged", self.refresh])"""
+        pass
+
+    def add_script_job(self, **kwargs):
+        """Create and track a cmds.scriptJob, returning its integer ID.
+
+        Pass creation flags such as event=[event_name, callback] or
+        attributeChange=[path, callback]. Permanent and protected jobs are
+        rejected. Query, listing, and kill flags are not supported; all supplied
+        flags are passed directly to Maya.
+
+        Prefer registering in create_script_jobs() to recreate jobs on reopen.
+        Jobs added elsewhere are tracked but not automatically recreated. Maya
+        may independently delete one-shot or scene-bound jobs."""
+        if any(kwargs.get(flag) for flag in ("permanent", "per", "protected", "pro")):
+            raise ValueError("UI script jobs must be removable and unprotected.")
+        job_id = cmds.scriptJob(**kwargs)
+        if type(job_id) is not int:
+            raise ValueError("add_script_job() requires flags that create a job.")
+        self._script_jobs.add(job_id)
+        return job_id
+
+    def clear_script_jobs(self):
+        """Remove tracked jobs, skipping IDs already removed by Maya.
+
+        Does not reset the show lifecycle or immediately recreate listeners."""
+        _clear_script_jobs(self._script_jobs)
+
+    def showEvent(self, event):
+        """Run the job hook once per open session and clean up if it raises."""
+        super().showEvent(event)
+        if not self._script_jobs_active:
+            try:
+                self.create_script_jobs()
+            except Exception:
+                self.clear_script_jobs()
+                raise
+            self._script_jobs_active = True
+
+    def closeEvent(self, event):
+        """Clean up jobs and reset their lifecycle when Qt accepts the close event."""
+        super().closeEvent(event)
+        if event.isAccepted():
+            self.clear_script_jobs()
+            self._script_jobs_active = False
+
+    def done(self, result):
+        # QDialog.accept()/reject() (including Escape) also end the UI session.
+        """Clean up jobs for accept/reject and finish the dialog with result."""
+        self.clear_script_jobs()
+        self._script_jobs_active = False
+        super().done(result)
+
+
+def _clear_script_jobs(jobs):
+    """Kill existing IDs in the mutable set and discard processed IDs."""
+    for job_id in list(jobs):
+        if cmds.scriptJob(exists=job_id):
+            cmds.scriptJob(kill=job_id)
+        jobs.discard(job_id)
+
 def maya_main_window():
-    """
-    Return the Maya main window widget as a Python object
-    """
+    """Return Maya's main window as a wrapped QtWidgets.QWidget."""
     main_window_ptr = omui.MQtUtil.mainWindow()
     if sys.version_info.major >= 3:
         return wrapInstance(int(main_window_ptr), QtWidgets.QWidget)
@@ -72,10 +158,11 @@ def maya_main_window():
 def run_window(
     object_ui_name: str, ui_class: type[PandaUIBaseClass], parent=None
 ) -> PandaUIBaseClass:
-    """Show a PandaUIBaseClass subclass, replacing windows with the same name.
+    """Show and return a PandaUIBaseClass subclass, replacing matching windows.
 
-    The subclass constructor must accept name and parent keyword arguments.
-    """
+    Close and schedule deletion of top-level widgets whose objectName()
+    matches object_ui_name. ui_class must accept name and parent keywords.
+    Keep the returned instance for later interaction."""
     for widget in QtWidgets.QApplication.topLevelWidgets():
         if widget.objectName() == object_ui_name:
             widget.close()
@@ -91,11 +178,24 @@ def create_attribute_widget(
     parent_attr_name:str=None,
     is_connected: bool = False,
 ) -> AttributeWidget:
-    """Return the editor's outer widget, controls, and recursive child results."""
+    """Build an attribute editor and return its AttributeWidget controls.
+
+    attribute accepts an Attr or node-qualified path; parent is the Qt
+    parent. Compounds and arrays recursively expose children. parent_attr_name
+    removes a parent name from component labels; is_connected propagates
+    incoming-connection highlighting.
+
+    Scalar editors support bool, numeric, angle, distance, time, enum, and
+    string values. Edits call Attr.set(); unsettable scalar editors are
+    disabled. Unsupported scalar types raise TypeError. Values are read
+    at creation; this function does not install scene-change listeners.
+
+    Array + inserts an editor for next_index_attr(). It does not store a
+    value or reserve a distinct index until a value is written to Maya."""
     displayed_indices = set()
 
     def add_to_array(child_layout:QtWidgets.QHBoxLayout):
-        """Append a pending element editor immediately before the + button"""
+        """Insert a pending array-element editor before the + button layout."""
         next_index_attr = attribute.next_index_attr()
         child_editor = create_attribute_widget(
             next_index_attr, widget, parent_attr_name, is_connected
@@ -243,6 +343,7 @@ def create_attribute_widget(
     )
 
 def create_separator():
+    """Return a sunken horizontal QFrame for insertion into a Qt layout."""
     separator = QtWidgets.QFrame()
     separator.setFrameShape(QtWidgets.QFrame.HLine)
     separator.setFrameShadow(QtWidgets.QFrame.Sunken)

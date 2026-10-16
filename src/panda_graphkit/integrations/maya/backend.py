@@ -23,7 +23,7 @@ from ...graph.signatures import NUVV_O_V_SIG
 from ...maya import (
     create_node,
     wrap_node,
-    exists,
+    node_exists,
     delete_node,
     Node as MNode,
     Attr as MAttr,
@@ -86,7 +86,7 @@ class MayaBackend(Backend):
             if hasattr(attribute, "value"):
                 filtered_attributes.append(attribute.value)
 
-        if not exists(node):
+        if not node_exists(node):
             raise RuntimeError(f"Node {node} does not exist")
         attr = wrap_node(node)
         try:

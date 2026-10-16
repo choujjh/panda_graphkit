@@ -1,4 +1,4 @@
-"""Maya node and attribute wrappers exposed by GraphKit."""
+"""Public Maya node/attribute wrappers, type helpers, and PySide2 UI utilities."""
 
 from .node_wrapper import (
     Node,
@@ -9,7 +9,7 @@ from .node_wrapper import (
     wrap_node,
     create_node,
     make_len,
-    exists,
+    node_exists,
     kwargs_to_dict,
     delete_node,
     AttrTypes,
@@ -29,7 +29,7 @@ __all__ = [
     "wrap_node",
     "create_node",
     "make_len",
-    "exists",
+    "node_exists",
     "kwargs_to_dict",
     "delete_node",
     "Node",
