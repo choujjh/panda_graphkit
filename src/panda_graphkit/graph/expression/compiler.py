@@ -438,7 +438,10 @@ class Compiler:
             # Only fold operations with an implemented constant evaluator.
             # Other functions must retain each positional argument.
             if node.operation not in (
-                ops_math.ADD, ops_math.SUM, ops_math.MULTIPLY, ops_math.PRODUCT
+                ops_math.ADD,
+                ops_math.SUM,
+                ops_math.MULTIPLY,
+                ops_math.PRODUCT,
             ):
                 continue
 

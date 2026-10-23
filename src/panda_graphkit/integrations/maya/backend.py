@@ -63,8 +63,8 @@ class MayaBackend(Backend):
 
     def __init__(self):
         super().__init__()
-        self.supported_operations_map[PRODUCT.name] = (
-            PRODUCT.without_signatures(NUVV_O_V_SIG)
+        self.supported_operations_map[PRODUCT.name] = PRODUCT.without_signatures(
+            NUVV_O_V_SIG
         )
 
     def resolve_attribute_type(self, node, attributes):
@@ -264,7 +264,9 @@ class MayaBackend(Backend):
 
         return ret_variables
 
-    def _get_attr(self, port: Port, maya_node: MNode, node_map: NodeMap) -> MAttr | list[MAttr]:
+    def _get_attr(
+        self, port: Port, maya_node: MNode, node_map: NodeMap
+    ) -> MAttr | list[MAttr]:
         """Gets attribute from mapped maya node
 
         Args:

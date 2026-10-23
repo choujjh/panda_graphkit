@@ -90,8 +90,11 @@ class Tokenizer:
         self.source = source
         self.backend = backend
         self.operators = sorted(
-            (alias for alias in backend.supported_operations_map
-             if alias and not alias[0].isalnum() and alias[0] not in "|:_"),
+            (
+                alias
+                for alias in backend.supported_operations_map
+                if alias and not alias[0].isalnum() and alias[0] not in "|:_"
+            ),
             key=len,
             reverse=True,
         )

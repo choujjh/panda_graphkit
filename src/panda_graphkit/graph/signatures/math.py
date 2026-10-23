@@ -175,18 +175,12 @@ N16_O_M_SIG = Signature(
 )
 
 M_M_O_N_SIG = Signature(
-    inputs=(
-        Parameter("input1", MATRIX4),
-        Parameter("input2", MATRIX4)
-    ),
-    outputs=Parameter("output", NUMBER)
+    inputs=(Parameter("input1", MATRIX4), Parameter("input2", MATRIX4)),
+    outputs=Parameter("output", NUMBER),
 )
 V_V_O_N_SIG = Signature(
-    inputs=(
-        Parameter("input1", VECTOR),
-        Parameter("input2", VECTOR)
-    ),
-    outputs=Parameter("output", NUMBER)
+    inputs=(Parameter("input1", VECTOR), Parameter("input2", VECTOR)),
+    outputs=Parameter("output", NUMBER),
 )
 
 V_O_V_SIG = Signature(

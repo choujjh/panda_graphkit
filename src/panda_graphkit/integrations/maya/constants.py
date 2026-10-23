@@ -106,7 +106,7 @@ DIST = OperationMap(
             ),
             output_attributes=("distance",),
         ),
-    ]
+    ],
 )
 DOT = OperationMap(
     operation=ops_math.DOT,

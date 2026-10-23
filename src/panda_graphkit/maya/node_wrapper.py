@@ -13,6 +13,7 @@ from enum import Enum
 
 class _OMUtils:
     """Internal helpers for resolving Maya dependency nodes and plugs."""
+
     @classmethod
     def try_int(cls, s):
         """Return int(s), or None on TypeError or ValueError."""
@@ -347,7 +348,7 @@ def wrap_node(node, **attr_data_dict):
     Keyword attribute data is set or connected after wrapping. Raise
     RuntimeError if the node does not exist."""
     if not node_exists(node):
-        raise RuntimeError(f"Node \"{node}\" does not exist. wrapping node failed")
+        raise RuntimeError(f'Node "{node}" does not exist. wrapping node failed')
     node_class = Node
     if issubclass(type(node), Node):
         if node.type_ == "container":
@@ -426,6 +427,7 @@ def make_len(curr_list: list, len_: int, default=0.0):
 
 class AttrTypes(Enum):
     """Supported attribute types and their cmds.addAttr type flags."""
+
     bool = {"attributeType": "bool"}
     compound = {"attributeType": "compound"}
     double2 = {"attributeType": "double2"}
@@ -441,8 +443,10 @@ class AttrTypes(Enum):
     short = {"attributeType": "short"}
     string = {"dataType": "string"}
 
+
 class KeyableAttrs(Enum):
     """Common transform and visibility names for lock_hide_attr()."""
+
     t = "t"
     tx = "tx"
     ty = "ty"
@@ -457,7 +461,10 @@ class KeyableAttrs(Enum):
     sz = "sz"
     visibility = "visibility"
 
-def double3_children(name: str, suffixes: str = "XYZ", **add_attr_kwargs) -> dict[str, AttrTypes]:
+
+def double3_children(
+    name: str, suffixes: str = "XYZ", **add_attr_kwargs
+) -> dict[str, AttrTypes]:
     """Build three double children for a double3 in ``Node.add_attrs``.
 
     Child names append each suffix to ``name``, preserving letter case.
@@ -479,7 +486,6 @@ def double3_children(name: str, suffixes: str = "XYZ", **add_attr_kwargs) -> dic
     child_dict = {f"{name}{suffix}": AttrTypes.double for suffix in suffixes}
     child_dict.update(**add_attr_kwargs)
     return child_dict
-
 
 
 class Node:
@@ -746,8 +752,7 @@ class Node:
         connections = [
             x
             for x in connections
-            if x[0].node.type_ != "hyperLayout"
-            and x[1].node.type_ != "hyperLayout"
+            if x[0].node.type_ != "hyperLayout" and x[1].node.type_ != "hyperLayout"
         ]
         return connections
 
@@ -902,11 +907,13 @@ class Node:
             if isinstance(attr, KeyableAttrs):
                 attr = attr.value
             if not isinstance(attr, str):
-                raise ValueError(f"attr must be of type KeaybleAttr or str. attr {attr} is of type {type(attr)}")
+                raise ValueError(
+                    f"attr must be of type KeaybleAttr or str. attr {attr} is of type {type(attr)}"
+                )
             attr = self[attr]
             attr.set_locked(lock)
             attr.set_keyable(not hide)
-            
+
     # operator overloads
     def __str__(self):
         """Return the current unique node name."""
@@ -1279,6 +1286,7 @@ class Attr:
     def __init__(self, attr: Union[om2.MPlug, str], node: Node = None):
         """Resolve attr (MPlug or node-qualified path) and its optional Node wrapper."""
         self.node = None
+        self._enum_names = None
         if node is not None:
             self.node = wrap_node(node)
 
@@ -1344,6 +1352,14 @@ class Attr:
             return Attr(self.plug.parent(), self.node)
         else:
             return None
+
+    @property
+    def enum_names(self):
+        if self._enum_names is None and self.type_ == "enum":
+            self._enum_names = cmds.attributeQuery(
+                self.short_name, node=str(self.node), listEnum=True
+            )[0].split(":")
+        return self._enum_names
 
     # helper functions
     @staticmethod
@@ -1506,7 +1522,6 @@ class Attr:
             for child in self:
                 child.set_keyable(keyable)
 
-
     def is_keyable(self):
         """Return whether the attribute is keyable."""
         return cmds.getAttr(str(self), keyable=True)
@@ -1549,13 +1564,17 @@ class Attr:
             cmds.setAttr(str(self), value, type="matrix")
         elif attr_type == "enum":
             if isinstance(value, str):
-                if not hasattr(self, "enum_list"):
-                    self.enum_list = cmds.attributeQuery(
-                        self.short_name, node=str(self.node), listEnum=True
-                    )[0].split(":")
-                index = self.enum_list.index(value)
-                if index != -1:
-                    value = index
+                enum_value = 0
+                for enum_name in self.enum_names:
+                    label, separator, explicit_value = enum_name.partition("=")
+                    if separator:
+                        enum_value = int(explicit_value)
+                    if label == value:
+                        value = enum_value
+                        break
+                    enum_value += 1
+                else:
+                    raise ValueError(f"{value!r} is not an enum label for {self}")
             cmds.setAttr(str(self), value)
 
         elif self._plug_attr_type(plug) in self.__attr_data_map.keys():

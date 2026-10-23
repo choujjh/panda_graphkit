@@ -1,5 +1,6 @@
 """Shared utility functions used across graphkit modules."""
 
+
 def nested_to_dict(data, indexes=(), depth=0, max_depth=300):
     result = {}
     if depth >= max_depth:
@@ -13,6 +14,7 @@ def nested_to_dict(data, indexes=(), depth=0, max_depth=300):
             result[current_index] = value
 
     return result
+
 
 def kwargs_to_dict(**kwarg_dict):
     """returns keyword arguments as a dictionary"""

@@ -24,6 +24,7 @@ __all__ = [
     "types_is_compatable",
 ]
 
+
 @dataclass(frozen=True)
 class AttributeType:
     """A simple nominal type with optional parent for subtyping.

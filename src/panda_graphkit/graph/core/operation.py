@@ -183,7 +183,9 @@ class Operation:
     name: str
     signatures: tuple[Signature, ...] = field(compare=False)
     aliases: tuple[str, ...] = field(default=None)
-    infix: Mapping[str, tuple[int, Associativity]] = field(default_factory=dict, compare=False)
+    infix: Mapping[str, tuple[int, Associativity]] = field(
+        default_factory=dict, compare=False
+    )
 
     def __repr__(self):
         """Return a concise representation containing name and signature count."""
@@ -207,18 +209,24 @@ class Operation:
         if self.name not in self.aliases:
             curr_list = list(self.aliases)
             curr_list.append(self.name)
-            object.__setattr__(self,"aliases", tuple(curr_list))
+            object.__setattr__(self, "aliases", tuple(curr_list))
         for alias, (precedence, associativity) in self.infix.items():
             if alias not in self.aliases:
-                raise ValueError(f"Infix alias {alias!r} is not registered for {self.name!r}")
+                raise ValueError(
+                    f"Infix alias {alias!r} is not registered for {self.name!r}"
+                )
             if not isinstance(precedence, int) or precedence < 0:
                 raise ValueError(f"Invalid precedence for {alias!r}: {precedence!r}")
             if not isinstance(associativity, Associativity):
-                raise ValueError(f"Invalid associativity for {alias!r}: {associativity!r}")
+                raise ValueError(
+                    f"Invalid associativity for {alias!r}: {associativity!r}"
+                )
         object.__setattr__(self, "infix", MappingProxyType(dict(self.infix)))
 
     def replace(
-        self, name: str = None, signatures: tuple[Signature] = None,
+        self,
+        name: str = None,
+        signatures: tuple[Signature] = None,
         aliases: tuple[str, ...] = None,
         infix: Mapping[str, tuple[int, Associativity]] = None,
     ) -> Operation:

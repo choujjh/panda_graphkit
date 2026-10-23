@@ -5,6 +5,7 @@ performs type checking, type inference, and semantic validation. It
 resolves operations and attributes using the backend, and infers
 numeric return types based on input argument types.
 """
+
 from . import ast
 from ..core import STRING, FLOAT, INT, check_signature
 from ..backend import base
@@ -44,13 +45,16 @@ class Analyzer:
             else:
                 node = ast.Identifier(ref[0])
                 attrs = [
-                    ast.Literal(int(x)) if isinstance(x, int) or str(x).isdigit()
+                    ast.Literal(int(x))
+                    if isinstance(x, int) or str(x).isdigit()
                     else ast.Identifier(x)
                     for x in ref[1:]
                 ]
                 self.variables[key] = ast.AttributeAccess(node=node, attributes=attrs)
                 if attrs:
-                    self.variables[key].type_ = self.backend.resolve_attribute_type(node, attrs)
+                    self.variables[key].type_ = self.backend.resolve_attribute_type(
+                        node, attrs
+                    )
             if isinstance(self.variables[key], ast.Literal):
                 self.analyze_literal(self.variables[key])
 
@@ -226,7 +230,9 @@ class Analyzer:
             node.node = self.variables[var].node
             node.attributes = [*self.variables[var].attributes, *node.attributes]
         if not node.attributes:
-            raise TypeError("A backend node input must be accessed through an attribute")
+            raise TypeError(
+                "A backend node input must be accessed through an attribute"
+            )
         type_ = self.backend.resolve_attribute_type(node.node, node.attributes)
         node.type_ = type_
         return node.type_
@@ -247,9 +253,13 @@ class Analyzer:
             binding = self.input_bindings.get(target_name)
             if isinstance(binding, ast.AttributeAccess):
                 if not binding.attributes:
-                    raise TypeError(f"Cannot assign to backend node {target_name!r}; select an attribute")
+                    raise TypeError(
+                        f"Cannot assign to backend node {target_name!r}; select an attribute"
+                    )
                 node.target = ast.AttributeAccess(
-                    node=binding.node, attributes=list(binding.attributes), type_=binding.type_
+                    node=binding.node,
+                    attributes=list(binding.attributes),
+                    type_=binding.type_,
                 )
             else:
                 self.variables[target_name] = node.value

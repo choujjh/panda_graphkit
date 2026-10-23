@@ -20,7 +20,6 @@ from .ui import (
     AttributeWidget,
     PandaUIBaseClass,
     maya_main_window,
-    create_attribute_widget,
     run_window,
     create_separator,
 )
@@ -42,7 +41,6 @@ __all__ = [
     "double3_children",
     "maya_main_window",
     "PandaUIBaseClass",
-    "create_attribute_widget",
     "AttributeWidget",
     "run_window",
     "create_separator",

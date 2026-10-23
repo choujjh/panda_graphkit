@@ -94,9 +94,7 @@ class Parser:
 
             self._advance()
             next_precedence = (
-                precedence
-                if associativity is Associativity.RIGHT
-                else precedence + 1
+                precedence if associativity is Associativity.RIGHT else precedence + 1
             )
             right = self._expression(next_precedence)
             left = ast.BinaryOperation(operation=operator.value, left=left, right=right)

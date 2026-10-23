@@ -163,6 +163,7 @@ class Backend(ABC):
         supported_operations_map: Dict mapping operation names to Operation
             objects for the operations this backend supports.
     """
+
     supported_operations = [
         ops_math.SIN,
         ops_math.ACOS,
@@ -214,12 +215,12 @@ class Backend(ABC):
             num_elements=(16),
         ),
     }
+
     def __init__(self):
         super().__init__()
         self.supported_operations_map = {
-            alias: op 
-            for op in self.supported_operations
-            for alias in op.aliases}
+            alias: op for op in self.supported_operations for alias in op.aliases
+        }
 
     @abstractmethod
     def resolve_attribute_type(
