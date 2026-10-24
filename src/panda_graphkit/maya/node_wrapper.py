@@ -347,8 +347,8 @@ def wrap_node(node, **attr_data_dict):
 
     Keyword attribute data is set or connected after wrapping. Raise
     RuntimeError if the node does not exist."""
-    if not node_exists(node):
-        raise RuntimeError(f'Node "{node}" does not exist. wrapping node failed')
+    if not cmds.objExists(str(node)):
+        return None
     node_class = Node
     if issubclass(type(node), Node):
         if node.type_ == "container":
@@ -498,12 +498,31 @@ class Node:
     def __init__(self, node):
         """Initialize from a node name, Node, MObject, MPlug, or MFnDependencyNode."""
         if isinstance(node, str):
-            if not node_exists(node):
+            if not cmds.objExists(node):
                 cmds.error(f"node {node} does not exist")
                 return
-        self._dep_node = _OMUtils.get_dep_node(node)
+        self.__dep_node = _OMUtils.get_dep_node(node)
+        self._handle = om2.MObjectHandle(self.__dep_node.object())
         self.__attr_cache = {}
         self.__full_attr_list = None
+
+    @property
+    def exists(self):
+        """Return whether the original Maya node is alive and valid."""
+        return self._handle.isAlive() and self._handle.isValid()
+
+    def _require_valid(self):
+        """Discard cached attributes and reject access to a deleted node."""
+        if not self.exists:
+            self.__attr_cache.clear()
+            self.__full_attr_list = None
+            raise ReferenceError("The wrapped Maya node has been deleted.")
+
+    @property
+    def _dep_node(self):
+        """Guard all internal access to the cached Maya function set."""
+        self._require_valid()
+        return self.__dep_node
 
     # properties
     @property
@@ -770,7 +789,7 @@ class Node:
         DAG descendants are included. Missing nodes are ignored. clean=True is
         the default; clean=False deletes first but currently still continues
         into the cleanup code."""
-        if not node_exists(self):
+        if not self.exists:
             return
         if not clean:
             cmds.delete(str(self))
@@ -819,6 +838,7 @@ class Node:
 
         Pass re_cache=True to rebuild from the dependency node."""
 
+        self._require_valid()
         if self.__full_attr_list is None or re_cache:
             attr_count = self._dep_node.attributeCount()
             attributes = [self._dep_node.attribute(x) for x in range(attr_count)]
@@ -842,6 +862,7 @@ class Node:
 
     def get_attr_cache(self):
         """Return the live dictionary mapping attribute paths to cached Attr wrappers."""
+        self._require_valid()
         return self.__attr_cache
 
     def rename(self, new_name: str):
@@ -944,6 +965,7 @@ class Node:
 
     def _get_cached_attr(self, attr):
         """Resolve and cache attr by its path, then return the Attr wrapper."""
+        self._require_valid()
         if attr not in self.__attr_cache.keys():
             self.__attr_cache[attr] = Attr(
                 _OMUtils.get_plug(self._dep_node, attr), self
@@ -1290,12 +1312,24 @@ class Attr:
         if node is not None:
             self.node = wrap_node(node)
 
-        self.plug = _OMUtils.get_plug(None, attr)
-        if self.plug is None:
+        self._plug = _OMUtils.get_plug(None, attr)
+        if self._plug is None:
             cmds.error(f'{attr} attribute"s plug not found')
 
         if self.node is None:
-            self.node = wrap_node(Node(self.plug))
+            self.node = wrap_node(Node(self._plug))
+
+    @property
+    def plug(self):
+        """Return the cached plug only while its owning node is valid."""
+        self.node._require_valid()
+        return self._plug
+
+    @plug.setter
+    def plug(self, plug):
+        """Replace the cached plug after validating its owning node."""
+        self.node._require_valid()
+        self._plug = plug
 
     @property
     def name(self):
