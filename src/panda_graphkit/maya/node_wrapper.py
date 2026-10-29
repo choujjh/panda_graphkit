@@ -59,12 +59,13 @@ class _OMUtils:
         """Return a named immediate child MPlug, or None when absent.
 
         Pass attr=None to return a dictionary mapping child names to plugs."""
-        child_plugs = [plug.child(index) for index in range(plug.numChildren())]
-        child_plugs = {x.name().rsplit(".", 1)[1]: x for x in child_plugs}
         if attr is None:
-            return child_plugs
-        if attr in child_plugs.keys():
-            return child_plugs[attr]
+            children = (plug.child(index) for index in range(plug.numChildren()))
+            return {child.name().rsplit(".", 1)[1]: child for child in children}
+        for index in range(plug.numChildren()):
+            child = plug.child(index)
+            if child.name().rsplit(".", 1)[1] == attr:
+                return child
         return None
 
     @classmethod
@@ -350,16 +351,16 @@ def wrap_node(node, **attr_data_dict):
     if not cmds.objExists(str(node)):
         return None
     node_class = Node
-    if issubclass(type(node), Node):
-        if node.type_ == "container":
-            node_class = Container
-        elif node.type_ == "transform":
-            node_class = Transform
+    if isinstance(node, Node):
+        node_type = node.type_
     elif isinstance(node, str):
-        if cmds.nodeType(node) == "container":
-            node_class = Container
-        elif cmds.nodeType(node) == "transform":
-            node_class = Transform
+        node_type = cmds.nodeType(node)
+    else:
+        node_type = None
+    if node_type == "container":
+        node_class = Container
+    elif node_type == "transform":
+        node_class = Transform
 
     node_instance = node_class(node)
 
@@ -491,7 +492,8 @@ def double3_children(
 class Node:
     """Wrap a dependency node with cached Attr access and scene helpers.
 
-    Indexing retrieves Attr wrappers; assignment sets their values.
+    Indexing and dot access retrieve Attr wrappers; assignment sets their values.
+    Python members take precedence over Maya attributes in dot access.
     full_name uses MFnDependencyNode.uniqueName(); name strips DAG parents
     and namespaces, type_ reports the Maya type, and mobject exposes MObject."""
 
@@ -860,7 +862,7 @@ class Node:
         """Return the underlying maya.api.OpenMaya.MFnDependencyNode."""
         return self._dep_node
 
-    def get_attr_cache(self):
+    def _get_attr_cache(self):
         """Return the live dictionary mapping attribute paths to cached Attr wrappers."""
         self._require_valid()
         return self.__attr_cache
@@ -936,6 +938,29 @@ class Node:
             attr.set_keyable(not hide)
 
     # operator overloads
+    def __getattr__(self, name):
+        """Resolve missing public Python names through attribute indexing."""
+        if name.startswith("_"):
+            raise AttributeError(name)
+        return self[name]
+
+    def __setattr__(self, name, value):
+        """Preserve Python fields/properties; otherwise set a Maya attribute."""
+        if name.startswith("_"):
+            object.__setattr__(self, name, value)
+            return
+
+        for cls in type(self).__mro__:
+            if name in vars(cls):
+                object.__setattr__(self, name, value)
+                return
+
+        if name in vars(self):
+            object.__setattr__(self, name, value)
+            return
+
+        self[name] = value
+
     def __str__(self):
         """Return the current unique node name."""
         return self.full_name
@@ -1349,9 +1374,10 @@ class Attr:
     @property
     def type_(self):
         """Return the Maya attribute type, normalizing TdataCompound to compound."""
-        if cmds.getAttr(str(self), type=True) == "TdataCompound":
+        attr_type = cmds.getAttr(str(self), type=True)
+        if attr_type == "TdataCompound":
             return "compound"
-        return cmds.getAttr(str(self), type=True)
+        return attr_type
 
     @property
     def value(self):
@@ -1485,10 +1511,6 @@ class Attr:
         if self.get_src_connection() is None:
             return False
         return True
-
-    def get_plug(self):
-        """Return the underlying maya.api.OpenMaya.MPlug."""
-        return self.plug
 
     def get_connections(self, as_src: bool, as_dest: bool):
         """Return connected plugs as Attr wrappers.
@@ -1692,8 +1714,9 @@ class Attr:
             elif self.plug.isCompound:
                 full_attr_name = f"{full_attr_name}.{attr}"
 
-            if full_attr_name in self.node.get_attr_cache().keys():
-                return self.node.get_attr_cache()[full_attr_name]
+            attr_cache = self.node._get_attr_cache()
+            if full_attr_name in attr_cache:
+                return attr_cache[full_attr_name]
 
             plug = _OMUtils.get_plug(self.plug, attr)
             return Attr(plug, self.node)
@@ -1799,9 +1822,10 @@ class Attr:
 
     def next_index(self):
         """Return zero for an empty array, otherwise the highest existing index plus one."""
-        if self.__len__() == 0:
+        indices = self.get_indicies()
+        if not indices:
             return 0
-        return self.get_indicies()[-1] + 1
+        return indices[-1] + 1
 
     def next_index_attr(self):
         """Return an Attr for next_index() without assigning a stored value."""
@@ -1827,9 +1851,10 @@ class Attr:
         Raise TypeError for scalar plugs."""
         if not self.has_children():
             raise TypeError("attribute is not of type compound or array")
-        index_list = range(self.__len__())
         if self.plug.isArray:
             index_list = self.get_indicies()
+        else:
+            index_list = range(self.__len__())
         for index in index_list:
             yield self.__getitem__(index)
 
