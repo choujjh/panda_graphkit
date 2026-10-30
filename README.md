@@ -1,159 +1,93 @@
 # Panda GraphKit
 
-Panda GraphKit is a Python library for building typed dependency graphs for
-procedural animation.
+Build typed dependency graphs for procedural animation using Python or
+expressions. Includes type inference, a Maya backend, an extensible backend
+interface, and Maya node/attribute wrappers.
 
-The goal is to provide a DCC-independent graph and expression system that can
-be translated into different applications such as Maya, Blender, Houdini,
-and Unreal.
+> **Early development:** the API is experimental and subject to change.
 
-> 🚧 **Early development**
->
-> The API is experimental and subject to change.
+## Maya installation
 
-## Features
-
-- DCC-independent dependency graph
-- Typed nodes and ports
-- Expression language
-- Expression parsing and semantic analysis
-- Type inference
-- Backend support for different DCCs
-- Graph generation independent of the expression language
-
-## Architecture
+Add the package's `src` directory to `Maya.env`, then restart Maya:
 
 ```text
-Expression
-    │
-    ▼
-  Tokenizer
-    │
-    ▼
-  Parser
-    │
-    ▼
-   AST
-    │
-    ▼
- Analyzer
-    │
-    ▼
-  Graph
-    │
-    ├── Maya
-    ├── Bifrost
-    ├── Blender
-    ├── Houdini
-    └── Unreal
+PYTHONPATH=C:/path/to/panda_graphkit/src
 ```
 
-## Maya Installation
+On Windows, separate multiple paths with `;`. Run these examples inside Maya.
 
-Panda GraphKit is a standard Python package. Maya does not require a separate
-package format.
+## Nodes and attributes
 
-There are two ways to make Panda GraphKit available in Maya.
+```python
+from panda_graphkit.maya import create_node, wrap_node
 
-### PYTHONPATH
+source = create_node("transform", t=[0, 10, 0])
+target = create_node("transform")
+node = wrap_node(str(source))  # None if the node does not exist.
 
-For development, using `PYTHONPATH` is recommended.
+source.translate = [1, 2, 3]       # Same as source["translate"] = [1, 2, 3].
+position = source.translate.value  # Same as source["translate"].value.
+source.tx >> target.tx            # Connect.
+~target.tx                        # Disconnect incoming connections.
+target.tx.set(5)
 
-Panda GraphKit uses a `src` layout:
-
-```text
-panda_graphkit/
-├── pyproject.toml
-└── src/
-    └── panda_graphkit/
-        ├── __init__.py
-        ├── backend/
-        ├── core/
-        ├── expression/
-        ├── maya/
-        └── operations/
+matrix = source.worldMatrix[0]
+plug = matrix.plug                # Underlying OpenMaya MPlug.
 ```
 
-add `PYTHONPATH=C:/path/to/panda_graphkit/src` to maya.env file. if `PYTHONPATH`
-is already in use, add `;` inbetween each path
+Both `node.attr` and `node["attr"]` return attribute wrappers. Use brackets
+for names that conflict with Python members (such as `name`), names starting
+with `_`, or paths such as `node["worldMatrix[0]"]`.
 
-### Usage
-node creation and connection
-```
-from panda_graphkit.maya import create_node
+Creation keywords set values or connect supplied `Attr` objects. Arrays
+support logical indices, iteration over existing elements, and `next_index()`.
+Use `node.exists` to check validity; accessing a deleted node's plug raises
+`ReferenceError`. `attr.plug` replaces `attr.get_plug()`.
 
-t1 = create_node("transform", t=[0, 10, 0])
-t2 = create_node("transform", t=[3, 5, 0])
-t3 = create_node("transform", )
-t4 = create_node("transform", )
-len1 = create_node("distanceBetween", inMatrix1=t1["worldMatrix"][0], inMatrix2=t2["worldMatrix"][0])
-len2 = create_node("distanceBetween", inMatrix1=t2["worldMatrix"][0], inMatrix2=t3["worldMatrix"][0])
-len3 = create_node("distanceBetween", inMatrix1=t3["worldMatrix"][0], inMatrix2=t1["worldMatrix"][0])
+## Maya commands
+
+```python
+from panda_graphkit.maya import cmds
+
+cube, history = cmds.polyCube(name="exampleCube")
+cmds.setAttr(cube.tx, 3)
+cmds.select(cube)
+selected = cmds.ls(selection=True)
 ```
 
-expression
-```
+Commands accept wrappers and convert returned scene node/attribute names into
+wrappers, including within containers. Ordinary text matching a scene name is
+also converted; use `maya.cmds` for unchanged return values.
+
+## Expressions
+
+```python
 from panda_graphkit import build_expression
 from panda_graphkit.integrations.maya import MayaBackend
 
-exp_str = f"""
-  c_squared = {len1["distance"]} ** 2
-  a_squared = {len2["distance"]} ** 2
-  b_squared = {len3["distance"]} ** 2
-  numer = c_squared - (a_squared + b_squared)
-  denom = 2 * {len2["distance"]} * {len3["distance"]}
-  {t4["rx"]} = numer / denom
-"""
-
-maya_backend_ = MayaBackend()
-graph = build_expression(exp_str, "loc", "network", backend=maya_backend_)
-```
-
-### Named expression inputs
-
-Vector products can be used in expressions:
-
-```python
-result = build_expression(
-    "alignment = dot(a, b); normal = cross(a, b)",
-    "vectors",
-    "network",
-    backend=maya_backend_,
-    inputs={"a": t1["translate"], "b": t2["translate"]},
-)
-```
-
-`dot(a, b)` returns a scalar; `cross(a, b)` returns a vector using the
-right-hand rule. Maya computes these from the XYZ components without
-normalization. Reversing the cross product's arguments reverses its direction.
-
-Use `point_mult(matrix, point)` to transform a position including translation,
-`vector_mult(matrix, vector)` to transform a direction without translation,
-and `normalize(vector)` to produce a unit-length direction:
-
-```text
-position = point_mult(parent.worldMatrix[0], source.translate)
-direction = vector_mult(parent.worldMatrix[0], source.translate)
-unit_direction = normalize(direction)
-```
-
-These operations return vectors. In Maya they use XYZ components; the existing
-`matrix * vector` expression retains its point-transform behavior. Normalize
-nonzero vectors; zero-length handling is determined by the backend.
-
-```python
 result = build_expression(
     "result = speed * scale",
-    "loc",
+    "example",
     "network",
-    backend=maya_backend_,
-    inputs={"speed": t1["tx"], "scale": 2, "result": t4["ty"]},
+    backend=MayaBackend(),
+    inputs={"speed": source.tx, "scale": 2, "result": target.ty},
 )
 ```
 
-Here `speed` reads `t1.tx`, and assigning `result` connects the computed value
-into `t4.ty`. Later reads of `result` still refer to `t4.ty`.
-Names bound to constants, and names absent from `inputs`, are local variables
-that can be reassigned. A node binding can be used as an attribute owner, such
-as `target.ty = speed`; assigning to the bare node name is not supported.
-Repeated assignments to the same backend attribute keep the last connection.
+Attribute inputs read scene values; assigning to one connects the result to
+that attribute. Constants and unbound names act as local variables. Node
+inputs support paths such as `target.ty`. Repeated assignments to a scene
+attribute keep the last connection.
+
+Expressions support arithmetic and vector operations:
+
+| Operation | Result |
+| --- | --- |
+| `dot(a, b)` | Scalar dot product |
+| `cross(a, b)` | Right-handed vector cross product |
+| `point_mult(matrix, point)` | Position transformed with translation |
+| `vector_mult(matrix, vector)` | Direction transformed without translation |
+| `normalize(vector)` | Unit direction; zero-length behavior depends on the backend |
+
+`matrix * vector` also transforms a point. Dot and cross products do not
+normalize their inputs.

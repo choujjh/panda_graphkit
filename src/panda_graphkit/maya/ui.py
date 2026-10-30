@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field as dataclass_field
 
 from .node_wrapper import Attr, wrap_node
+from . import cmds
 
-import maya.cmds as cmds
 from PySide2 import QtWidgets
 from shiboken2 import wrapInstance
 import maya.OpenMayaUI as omui
@@ -53,7 +53,7 @@ class PandaUIBaseClass(QtWidgets.QDialog):
         pass
 
     def get_selection(self):
-        return [wrap_node(node) for node in cmds.ls(sl=True, long=True)]
+        return cmds.ls(sl=True, long=True)
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -76,63 +76,6 @@ class PandaUIBaseClass(QtWidgets.QDialog):
         self.script_jobs.clear()
         self._script_jobs_active = False
         super().done(result)
-
-
-def maya_main_window():
-    """
-    Return the Maya main window widget as a Python object
-    """
-    main_window_ptr = omui.MQtUtil.mainWindow()
-    if sys.version_info.major >= 3:
-        return wrapInstance(int(main_window_ptr), QtWidgets.QWidget)
-    else:
-        return wrapInstance(long(main_window_ptr), QtWidgets.QWidget)
-
-
-def run_window(
-    object_ui_name: str, ui_class: type[PandaUIBaseClass], parent=None
-) -> PandaUIBaseClass:
-    """Show a PandaUIBaseClass subclass, replacing windows with the same name.
-
-    The subclass constructor must accept name and parent keyword arguments.
-    """
-    for widget in QtWidgets.QApplication.topLevelWidgets():
-        if widget.objectName() == object_ui_name:
-            widget.close()
-            widget.deleteLater()
-
-    window = ui_class(name=object_ui_name, parent=parent)
-    window.show()
-    return window
-
-
-class ScriptJobManager:
-    def __init__(self):
-        self._jobs = set()
-
-    def add(self, **kwargs):
-        if any(kwargs.get(flag) for flag in ("permanent", "per", "protected", "pro")):
-            raise ValueError("Managed Jobs must be removable")
-
-        job_id = cmds.scriptJob(**kwargs)
-        self._jobs.add(job_id)
-
-        return job_id
-
-    def on_selection_change(self, callback):
-        return self.add(event=["SelectionChanged", callback])
-
-    def on_attribute_change(self, attribute, callback, **kwargs):
-        return self.add(attributeChange=[str(attribute), callback], **kwargs)
-
-    def on_connection_changed(self, attribute, callback):
-        return self.add(connectionChange=[str(attribute), callback])
-
-    def clear(self):
-        for job_id in tuple(self._jobs):
-            if cmds.scriptJob(exists=job_id):
-                cmds.scriptJob(kill=job_id)
-            self._jobs.discard(job_id)
 
 
 class AttributeWidget(QtWidgets.QWidget):
@@ -436,9 +379,7 @@ class AttributeWidget(QtWidgets.QWidget):
                 self.field.setText(override_str)
 
         if self.supported_type:
-            self.field.setEnabled(
-                bool(cmds.getAttr(str(self.attribute), settable=True))
-            )
+            self.field.setEnabled(bool(cmds.getAttr(self.attribute, settable=True)))
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -466,6 +407,63 @@ class AttributeWidget(QtWidgets.QWidget):
     def hideEvent(self, event):
         self.script_jobs.clear()
         super().hideEvent(event)
+
+
+def maya_main_window():
+    """
+    Return the Maya main window widget as a Python object
+    """
+    main_window_ptr = omui.MQtUtil.mainWindow()
+    if sys.version_info.major >= 3:
+        return wrapInstance(int(main_window_ptr), QtWidgets.QWidget)
+    else:
+        return wrapInstance(long(main_window_ptr), QtWidgets.QWidget)
+
+
+def run_window(
+    object_ui_name: str, ui_class: type[PandaUIBaseClass], parent=None
+) -> PandaUIBaseClass:
+    """Show a PandaUIBaseClass subclass, replacing windows with the same name.
+
+    The subclass constructor must accept name and parent keyword arguments.
+    """
+    for widget in QtWidgets.QApplication.topLevelWidgets():
+        if widget.objectName() == object_ui_name:
+            widget.close()
+            widget.deleteLater()
+
+    window = ui_class(name=object_ui_name, parent=parent)
+    window.show()
+    return window
+
+
+class ScriptJobManager:
+    def __init__(self):
+        self._jobs = set()
+
+    def add(self, **kwargs):
+        if any(kwargs.get(flag) for flag in ("permanent", "per", "protected", "pro")):
+            raise ValueError("Managed Jobs must be removable")
+
+        job_id = cmds.scriptJob(**kwargs)
+        self._jobs.add(job_id)
+
+        return job_id
+
+    def on_selection_change(self, callback):
+        return self.add(event=["SelectionChanged", callback])
+
+    def on_attribute_change(self, attribute, callback, **kwargs):
+        return self.add(attributeChange=[str(attribute), callback], **kwargs)
+
+    def on_connection_changed(self, attribute, callback):
+        return self.add(connectionChange=[str(attribute), callback])
+
+    def clear(self):
+        for job_id in tuple(self._jobs):
+            if cmds.scriptJob(exists=job_id):
+                cmds.scriptJob(kill=job_id)
+            self._jobs.discard(job_id)
 
 
 def create_separator():
