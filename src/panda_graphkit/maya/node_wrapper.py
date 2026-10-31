@@ -178,12 +178,12 @@ class Matrix(om2.MMatrix):
     @property
     def rotate(self):
         """Return the three Euler rotation components in degrees as a tuple."""
-        return self.as_degrees
+        return Vector(*self.as_degrees)
 
     @property
     def translate(self):
         """Return the three translation entries as a tuple."""
-        return self[12], self[13], self[14]
+        return Vector(self[12], self[13], self[14])
 
     @property
     def scale(self):
@@ -191,7 +191,7 @@ class Matrix(om2.MMatrix):
         z_scalar = 1
         if self.det4x4() < 0:
             z_scalar = -1
-        return (
+        return Vector(
             om2.MVector(self.column(0)).length(),
             om2.MVector(self.column(1)).length(),
             om2.MVector(self.column(2)).length() * z_scalar,
@@ -369,6 +369,10 @@ def wrap_node(node, **attr_data_dict):
     return node_instance
 
 
+def wrap_nodes(*nodes):
+    return [wrap_node(node) for node in nodes]
+
+
 def create_node(node_type: str, name: str = None, **attr_data_dict):
     """Create node_type with optional name and return its specialized wrapper.
 
@@ -383,13 +387,13 @@ def node_exists(node):
     return cmds.objExists(str(node))
 
 
-def delete_node(node: Node):
+def delete_nodes(*nodes):
     """Delete a node from the current Maya scene.
 
     Args:
         node: Node wrapper or node name identifying the node to delete.
     """
-    cmds.delete(str(node))
+    cmds.delete(*[str(node) for node in nodes])
 
 
 def _snake_to_camel(snake_str):
