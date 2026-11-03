@@ -3,7 +3,7 @@ from dataclasses import dataclass, field as dataclass_field
 from .node_wrapper import Attr, wrap_node
 from . import cmds
 
-from PySide2 import QtWidgets
+from PySide2 import QtCore, QtGui, QtWidgets
 from shiboken2 import wrapInstance
 import maya.OpenMayaUI as omui
 
@@ -76,6 +76,196 @@ class PandaUIBaseClass(QtWidgets.QDialog):
         self.script_jobs.clear()
         self._script_jobs_active = False
         super().done(result)
+
+
+class _PaletteCellDelegate(QtWidgets.QStyledItemDelegate):
+    """Keep swatch colors visible while outlining the selected cell."""
+
+    def paint(self, painter, option, index):
+        brush = index.data(QtCore.Qt.BackgroundRole)
+        if brush is None:
+            return
+        painter.save()
+        painter.fillRect(option.rect, brush)
+        if option.state & QtWidgets.QStyle.State_Selected:
+            painter.setPen(QtGui.QPen(QtGui.QColor("#b0b0b0"), 1))
+            painter.drawRect(option.rect.adjusted(1, 1, -2, -2))
+        painter.restore()
+
+
+class PaletteGridWidget(QtWidgets.QWidget):
+    """Six-column grid of selectable RGB swatches from ``self._color``.
+
+    ``selection_changed`` emits the zero-based index, or -1 when cleared.
+    """
+
+    selection_changed = QtCore.Signal(int)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.columns = 6
+        self.cell_size = 24
+        self._selected_index = -1
+        self.initialize_colors()
+        self.create_widget()
+        self.create_layout()
+        self.create_connection()
+
+    def initialize_colors(self):
+        self._color = []
+        for index in range(32):
+            self._color.append(cmds.colorIndex(index, q=True))
+
+    def create_widget(self):
+        # Table
+        rows = (len(self._color) + self.columns - 1) // self.columns
+        self.table = QtWidgets.QTableWidget(rows, self.columns, self)
+        for header in (self.table.horizontalHeader(), self.table.verticalHeader()):
+            header.hide()
+            header.setMinimumSectionSize(self.cell_size)
+            header.setDefaultSectionSize(self.cell_size)
+
+        # Selection
+        self.table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.table.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
+        self.table.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self.table.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self.table.setItemDelegate(_PaletteCellDelegate(self.table))
+
+        # Colors
+        for index in range(rows * self.columns):
+            item = QtWidgets.QTableWidgetItem()
+            if index < len(self._color):
+                item.setFlags(QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable)
+                item.setBackground(QtGui.QColor.fromRgbF(*self._color[index]))
+                item.setToolTip(f"Color {index}")
+            else:
+                item.setFlags(QtCore.Qt.NoItemFlags)
+            row = index // self.columns
+            column = index % self.columns
+            self.table.setItem(row, column, item)
+
+    def create_layout(self):
+        frame = self.table.frameWidth() * 2
+        self.table.setFixedSize(
+            self.table.horizontalHeader().length() + frame,
+            self.table.verticalHeader().length() + frame,
+        )
+        layout = QtWidgets.QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
+        layout.addWidget(self.table)
+        self.setLayout(layout)
+
+    def create_connection(self):
+        self.table.itemSelectionChanged.connect(self._selection_changed)
+
+    def _selection_changed(self):
+        index = self.get_selection()
+        if index != self._selected_index:
+            self._selected_index = index
+            self.selection_changed.emit(index)
+
+    def get_selection(self):
+        """Return the selected zero-based index, or -1 if nothing is selected."""
+        items = self.table.selectedItems()
+        if not items:
+            return -1
+        item = items[0]
+        return item.row() * self.columns + item.column()
+
+
+
+class PaletteCellWidget(QtWidgets.QWidget):
+    """Color square that opens a palette popup. Selection is a color index."""
+
+    selection_changed = QtCore.Signal(int)
+
+    def __init__(self, parent=None, index=0):
+        super().__init__(parent)
+        self._selected_index = -1
+        self.create_widget()
+        self.create_layout()
+        self.create_connection()
+        self.set_selection(index)
+
+    def create_widget(self):
+        # Color square
+        self.button = QtWidgets.QPushButton()
+        self.button.setFixedSize(24, 24)
+        self.button.setAccessibleName("Choose color")
+
+        # Popup
+        self.popup = QtWidgets.QFrame(self, QtCore.Qt.Popup)
+        self.palette = PaletteGridWidget(self.popup)
+        self.escape = QtWidgets.QShortcut(QtGui.QKeySequence("Escape"), self.popup)
+        self.escape.setContext(QtCore.Qt.WidgetWithChildrenShortcut)
+
+    def create_layout(self):
+        layout = QtWidgets.QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
+        layout.addWidget(self.button)
+        self.setLayout(layout)
+
+        popup_layout = QtWidgets.QVBoxLayout()
+        popup_layout.setContentsMargins(4, 4, 4, 4)
+        popup_layout.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
+        popup_layout.addWidget(self.palette)
+        self.popup.setLayout(popup_layout)
+
+    def create_connection(self):
+        self.button.clicked.connect(self.show_popup)
+        self.palette.table.itemClicked.connect(self.select_cell)
+        self.palette.table.itemActivated.connect(self.select_cell)
+        self.escape.activated.connect(self.popup.hide)
+
+    def show_popup(self):
+        row = self._selected_index // self.palette.columns
+        column = self._selected_index % self.palette.columns
+        self.palette.table.setCurrentCell(row, column)
+        self.popup.adjustSize()
+
+        position = self.button.mapToGlobal(QtCore.QPoint(0, self.button.height()))
+        screen = QtWidgets.QApplication.desktop().availableGeometry(self.button)
+        if position.y() + self.popup.height() > screen.bottom() + 1:
+            position.setY(self.button.mapToGlobal(QtCore.QPoint(0, 0)).y()
+                          - self.popup.height())
+        position.setX(max(screen.left(), min(position.x(),
+                          screen.right() + 1 - self.popup.width())))
+        position.setY(max(screen.top(), position.y()))
+        self.popup.move(position)
+        self.popup.show()
+        self.palette.table.setFocus()
+
+    def select_cell(self, item):
+        if not item.flags() & QtCore.Qt.ItemIsSelectable:
+            return
+        index = item.row() * self.palette.columns + item.column()
+        self.popup.hide()
+        self.set_selection(index)
+
+    def set_selection(self, index):
+        if not isinstance(index, int) or not 0 <= index < len(self.palette._color):
+            raise ValueError("Invalid palette index")
+        color = QtGui.QColor.fromRgbF(*self.palette._color[index])
+        self.button.setStyleSheet(
+            f"QPushButton {{ background-color: {color.name()}; "
+            "border: 1px solid #777; }"
+            "QPushButton:focus { border: 1px solid #b0b0b0; }"
+        )
+        self.button.setToolTip(f"Color {index}")
+        if index != self._selected_index:
+            self._selected_index = index
+            self.selection_changed.emit(index)
+
+    def get_selection(self):
+        return self._selected_index
+
+    def hideEvent(self, event):
+        self.popup.hide()
+        super().hideEvent(event)
 
 
 class AttributeWidget(QtWidgets.QWidget):

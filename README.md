@@ -59,6 +59,36 @@ Commands accept wrappers and convert returned scene node/attribute names into
 wrappers, including within containers. Ordinary text matching a scene name is
 also converted; use `maya.cmds` for unchanged return values.
 
+## Color palette widget
+
+`PaletteWidget` is a single-selection color grid with six columns by
+default. Its default 32 colors are queried from a temporary Maya `palettePort`.
+Pass `columns=8` for eight columns, or `colors=["#ff0000", "#00ff00"]` for
+custom swatches. RGB tuples with components from 0 to 1 are also accepted.
+
+```python
+from panda_graphkit.maya import PaletteWidget
+
+# In your UI's create_widget / create_layout / create_connections methods:
+self.palette = PaletteWidget(parent=self)
+self.layout().addWidget(self.palette)
+self.palette.selection_changed.connect(lambda index: print("Selected:", index))
+
+self.palette.set_selection(6)
+index = self.palette.get_selection()  # Zero-based index; -1 when cleared.
+color = self.palette.selected_color()  # QColor, or None when cleared.
+self.palette.set_selection(-1)  # Clear selection.
+
+# Keep a reference to a reusable popup, e.g. on your UI instance:
+self.palette_popup = PaletteWidget(parent=self, popup=True)
+self.palette_popup.selection_changed.connect(lambda index: print(index))
+self.palette_popup.show_popup()  # At cursor, or pass a global QPoint.
+```
+
+The signal fires for both user and programmatic selection changes, but not
+when the same cell is selected again. Popups retain selection when hidden;
+choosing a cell, pressing Escape, or clicking outside dismisses them.
+
 ## Expressions
 
 ```python

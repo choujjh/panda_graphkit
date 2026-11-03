@@ -23,7 +23,7 @@ class _OMUtils:
             return None
 
     @classmethod
-    def get_dep_node(cls, node: Union[om2.MObject, om2.MPlug, str]):
+    def get_dep_node(cls, node: om2.MObject | om2.MPlug | str):
         """Resolve a name, Node, MObject, MPlug, or MFnDependencyNode.
 
         Return an MFnDependencyNode, or None for unsupported inputs. Missing
@@ -71,8 +71,8 @@ class _OMUtils:
     @classmethod
     def get_plug(
         cls,
-        attr_parent: Union[om2.MPlug, om2.MFnDependencyNode, str],
-        attr: Union[om2.MPlug, str],
+        attr_parent: om2.MPlug | om2.MFnDependencyNode | str,
+        attr: om2.MPlug | str,
     ):
         """Resolve attr relative to a node name, MFnDependencyNode, or MPlug.
 
@@ -380,20 +380,6 @@ def create_node(node_type: str, name: str = None, **attr_data_dict):
     if name is None:
         return wrap_node(cmds.createNode(node_type), **attr_data_dict)
     return wrap_node(cmds.createNode(node_type, name=name), **attr_data_dict)
-
-
-def node_exists(node):
-    """Return whether the node name or wrapper exists in the scene."""
-    return cmds.objExists(str(node))
-
-
-def delete_nodes(*nodes):
-    """Delete a node from the current Maya scene.
-
-    Args:
-        node: Node wrapper or node name identifying the node to delete.
-    """
-    cmds.delete(*[str(node) for node in nodes])
 
 
 def _snake_to_camel(snake_str):
@@ -717,7 +703,7 @@ class Node:
         kwargs["longName"] = name
 
         if isinstance(type_, str):
-            if type_.find(":") is not None:
+            if type_.find(":") >= 0:
                 for enum_name in ["enumName", "enum_name"]:
                     if enum_name in kwargs.keys():
                         kwargs.pop(enum_name)
@@ -965,10 +951,6 @@ class Node:
 
         self[name] = value
 
-    def __str__(self):
-        """Return the current unique node name."""
-        return self.full_name
-
     def __getitem__(self, attr: str):
         """Return the cached Attr for attr, resolving and caching it if necessary.
 
@@ -991,6 +973,10 @@ class Node:
         """Set attribute attr to new_value through Attr.set()."""
         attr = self.__getitem__(attr)
         attr.set(new_value)
+        
+    def __str__(self):
+        """Return the current unique node name."""
+        return self.full_name
 
     def _get_cached_attr(self, attr):
         """Resolve and cache attr by its path, then return the Attr wrapper."""
@@ -1525,7 +1511,7 @@ class Attr:
     def get_src_connection(self):
         """Return the first incoming source Attr, or None when unconnected."""
         connection_list = self.get_connections(False, True)
-        if connection_list == []:
+        if not connection_list:
             return None
         else:
             return connection_list[0]
